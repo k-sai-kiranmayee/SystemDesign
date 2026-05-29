@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web App Architecture — System Design</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+      background: #111317;
+      color: #e2e4e8;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+
+    .page { max-width: 860px; margin: 0 auto; }
+
+    h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+    .info-bar {
+      background: #1a2a3a;
+      border: 1px solid #2297F640;
+      border-left: 4px solid #2297F6;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #a8c8e8;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    /* ---- Layer card ---- */
+    .layer-wrap { position: relative; }
+
+    .layer-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-left: 4px solid var(--c);
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .layer-card:hover { background: #1f2330; box-shadow: 0 2px 10px #0005; }
+    .layer-card.open { border-radius: 10px 10px 0 0; border-bottom-color: transparent; }
+
+    .layer-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+
+    .layer-info { flex: 1; min-width: 0; }
+    .layer-name { font-size: 14px; font-weight: 600; color: #f0f0f0; }
+    .layer-sub  { font-size: 12px; color: #666; margin-top: 2px; }
+
+    .layer-tags { display: flex; flex-wrap: wrap; gap: 5px; flex-shrink: 0; max-width: 320px; }
+    .tag {
+      font-size: 11px; padding: 2px 8px;
+      border-radius: 20px;
+      background: var(--c, #2297F6)18;
+      border: 1px solid var(--c, #2297F6)55;
+      color: var(--c, #2297F6);
+      white-space: nowrap;
+    }
+
+    .chevron { font-size: 12px; color: #555; transition: transform 0.2s; flex-shrink: 0; }
+    .layer-card.open .chevron { transform: rotate(180deg); }
+
+    /* ---- Details panel ---- */
+    .layer-details {
+      display: none;
+      background: #161920;
+      border: 1px solid #2a2d35;
+      border-top: 2px solid var(--c);
+      border-radius: 0 0 10px 10px;
+      padding: 18px 20px;
+    }
+    .layer-details.show { display: block; }
+
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width:640px){ .details-grid { grid-template-columns: 1fr; } }
+
+    .d-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: #555; margin-bottom: 7px;
+    }
+    .d-text { font-size: 12px; color: #bbb; line-height: 1.7; }
+
+    .why-box {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--c, #2297F6)0d;
+      border-left: 3px solid var(--c, #2297F6);
+      border-radius: 0 6px 6px 0;
+      font-size: 12px; color: #999; line-height: 1.6;
+    }
+
+    .resp-list { list-style: none; padding: 0; margin: 0; }
+    .resp-list li {
+      font-size: 12px; color: #ccc; padding: 4px 0 4px 18px;
+      position: relative; line-height: 1.5;
+    }
+    .resp-list li::before { content: '→'; position: absolute; left: 0; color: var(--c, #2297F6); }
+
+    .all-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+
+    /* ---- Connector arrow ---- */
+    .connector {
+      display: flex; align-items: center; justify-content: center;
+      height: 30px; position: relative;
+    }
+    .connector::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 12px; left: 50%;
+      width: 1px;
+      background: #2a2d35;
+    }
+    .conn-label {
+      z-index: 1;
+      background: #111317;
+      padding: 2px 10px;
+      border: 1px solid #2a2d35;
+      border-radius: 20px;
+      font-size: 10px;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    /* ---- Legend ---- */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 14px;
+      margin-top: 24px; padding: 14px 16px;
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-radius: 10px;
+    }
+    .legend-title { width: 100%; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #555; }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #666; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>General Web Application Architecture</h1>
+    <p class="subtitle">Top-down layers — click any layer to expand its role, responsibilities, and tools</p>
+
+    <div class="info-bar">
+      Request flow: <strong>Client → DNS → CDN → Load Balancer → API Gateway → App Layer → Cache / DB / Storage</strong><br>
+      Message Queue and Monitoring are cross-cutting — they support all other layers.
+    </div>
+
+    <div id="layers"></div>
+    <div id="legend" class="legend"></div>
+  </div>
+
+  <script>
+    const GROUPS = [
+      { label: 'Client / Presentation', color: '#2297F6' },
+      { label: 'Networking / Routing',  color: '#06B6D4' },
+      { label: 'Application',           color: '#A78BFA' },
+      { label: 'Data',                  color: '#34D399' },
+      { label: 'Async / Events',        color: '#FBBF24' },
+      { label: 'Observability',         color: '#F87171' },
+    ];
+
+    const LAYERS = [
+      {
+        icon: '🖥️', name: 'Client Layer', sub: 'Browser · Mobile · Desktop',
+        color: '#2297F6',
+        tools: ['React', 'Vue.js', 'Angular', 'Swift/Kotlin', 'Flutter'],
+        description: 'The user-facing interface. Renders UI, handles user interactions, manages client-side state, and communicates with the backend via HTTP / WebSocket.',
+        why: 'This is what users see and touch. Poor performance here = poor experience, regardless of backend speed.',
+        responsibilities: [
+          'Render HTML/CSS/JS in browser or native shell',
+          'Handle user input, routing, and local state',
+          'Make API calls to the backend (fetch, axios)',
+          'Cache responses locally (Service Worker, localStorage)',
+        ],
+        arrow: 'HTTPS request ↓',
+      },
+      {
+        icon: '🌐', name: 'DNS Resolution', sub: 'Domain name → IP address',
+        color: '#06B6D4',
+        tools: ['AWS Route 53', 'Cloudflare DNS', 'Google Cloud DNS'],
+        description: 'Translates domain names (e.g. api.myapp.com) into IP addresses. Supports geo-routing, health-based failover, and latency-based routing.',
+        why: 'DNS is the very first hop. A misconfiguration or outage here takes down the entire app before a packet reaches your server.',
+        responsibilities: [
+          'Resolve domain names to IP addresses (A/AAAA records)',
+          'Geographic or latency-based routing',
+          'Failover to backup region on health-check failure',
+          'Weighted routing for canary / blue-green deployments',
+        ],
+        arrow: 'IP resolved → edge node ↓',
+      },
+      {
+        icon: '⚡', name: 'CDN / Edge Cache', sub: 'Serve assets from nodes near users',
+        color: '#06B6D4',
+        tools: ['CloudFront', 'Cloudflare', 'Fastly', 'Akamai'],
+        description: 'Distributes static assets (JS, CSS, images) to edge nodes close to users. Can also cache dynamic API responses at the edge to reduce origin load.',
+        why: 'Without a CDN every user hits your origin server. A CDN cuts latency 60–80% for static assets for global users.',
+        responsibilities: [
+          'Serve static files from nearby edge nodes',
+          'Reduce origin bandwidth and load',
+          'DDoS mitigation and WAF at the edge',
+          'Image optimisation and HTTP/2 push',
+        ],
+        arrow: 'Cache miss → origin ↓',
+      },
+      {
+        icon: '⚖️', name: 'Load Balancer / Reverse Proxy', sub: 'Distribute traffic across server instances',
+        color: '#06B6D4',
+        tools: ['Nginx', 'HAProxy', 'AWS ALB', 'GCP Load Balancer'],
+        description: 'Distributes incoming requests across multiple server instances. Handles SSL termination, health checks, and provides a single stable entry point while the backend scales.',
+        why: 'One server handles N req/s. A load balancer lets you scale to 10N, 100N by spreading load — and hides restarts from users.',
+        responsibilities: [
+          'Round-robin / least-connections traffic distribution',
+          'Health-check and remove unhealthy instances',
+          'SSL/TLS termination (offload from app servers)',
+          'Rate limiting and connection throttling',
+        ],
+        arrow: 'Routed request ↓',
+      },
+      {
+        icon: '🚪', name: 'API Gateway', sub: 'Single entry point for all APIs',
+        color: '#A78BFA',
+        tools: ['Kong', 'AWS API Gateway', 'Traefik', 'APIGEE'],
+        description: 'Acts as the front door for all backend API calls. Routes to the correct service and enforces cross-cutting concerns — auth, rate limiting, logging — in one place.',
+        why: 'Without an API Gateway, every service must implement auth and rate limiting independently — duplication and drift.',
+        responsibilities: [
+          'Route requests to correct downstream service',
+          'Authenticate & authorise (JWT / OAuth 2.0 / API keys)',
+          'Rate limit per client or endpoint',
+          'Circuit breaking, retry, and timeout enforcement',
+        ],
+        arrow: 'Authenticated + routed ↓',
+      },
+      {
+        icon: '⚙️', name: 'Application / Service Layer', sub: 'Core business logic',
+        color: '#A78BFA',
+        tools: ['Node.js', 'Spring Boot', 'Django/FastAPI', 'Go', 'Rails'],
+        description: 'Contains the product\'s core business logic. Processes requests, applies rules, coordinates between DBs, caches, queues, and external APIs.',
+        why: 'Every other layer exists to serve this one. This is where your unique product value lives.',
+        responsibilities: [
+          'Implement business rules and domain logic',
+          'Validate and sanitise input',
+          'Coordinate data from DB, cache, and external APIs',
+          'Publish events to message queues for async work',
+        ],
+        arrow: 'Cache lookup / DB query ↓',
+      },
+      {
+        icon: '💾', name: 'Cache Layer', sub: 'In-memory fast data store',
+        color: '#FBBF24',
+        tools: ['Redis', 'Memcached', 'DynamoDB DAX', 'Varnish'],
+        description: 'Stores frequently-read data in memory for sub-millisecond retrieval. Sits between the app and the DB. Also used for sessions, distributed locks, and pub/sub.',
+        why: 'DB reads take 5–100ms; cache reads take <1ms. For hot data this is a 100× improvement and dramatically cuts DB load.',
+        responsibilities: [
+          'Cache hot data (user profiles, configs)',
+          'Absorb DB read load on popular queries',
+          'Store user sessions (stateless app tier)',
+          'Distributed locks (Redis SETNX)',
+        ],
+        arrow: 'Cache miss → persistent store ↓',
+      },
+      {
+        icon: '🗄️', name: 'Database Layer', sub: 'Persistent authoritative data store',
+        color: '#34D399',
+        tools: ['PostgreSQL', 'MySQL', 'MongoDB', 'DynamoDB', 'Cassandra'],
+        description: 'The source of truth. SQL for structured/transactional data; NoSQL for flexible schemas or extreme write throughput.',
+        why: 'Choosing the wrong DB makes the app impossible to scale or causes data corruption. SQL vs NoSQL is a critical early decision.',
+        responsibilities: [
+          'CRUD with ACID guarantees (SQL)',
+          'Index management for query performance',
+          'Read replicas for read scaling and HA',
+          'Backups and point-in-time recovery',
+        ],
+        arrow: 'Binary / file data ↓',
+      },
+      {
+        icon: '📦', name: 'Object / File Storage', sub: 'Blobs, images, documents, exports',
+        color: '#34D399',
+        tools: ['Amazon S3', 'Google Cloud Storage', 'Azure Blob', 'MinIO'],
+        description: 'Stores unstructured binary data — uploads, images, videos, PDFs, batch exports. Effectively infinite scale at very low cost per GB.',
+        why: 'Databases are 10–100× more expensive per GB for binary data. Never store large blobs in a relational DB.',
+        responsibilities: [
+          'Store user-uploaded files',
+          'Host application exports (reports, CSVs)',
+          'Static website hosting (S3 + CloudFront)',
+          'Presigned URLs for direct client uploads',
+        ],
+        arrow: 'Async events / commands ↓',
+      },
+      {
+        icon: '📨', name: 'Message Queue / Event Bus', sub: 'Async decoupled communication',
+        color: '#FBBF24',
+        tools: ['Apache Kafka', 'RabbitMQ', 'AWS SQS/SNS', 'NATS'],
+        description: 'Decouples services. Producers publish events; consumers process them independently — enabling resilience, traffic buffering, and fan-out.',
+        why: 'Synchronous calls create tight coupling — if the downstream is slow, so is the caller. Queues break this dependency.',
+        responsibilities: [
+          'Decouple producers from consumers',
+          'Buffer traffic spikes to protect downstream services',
+          'Fan-out a single event to many consumers',
+          'Replay historical events (Kafka)',
+        ],
+        arrow: 'Metrics · Logs · Traces ↓',
+      },
+      {
+        icon: '📊', name: 'Monitoring & Observability', sub: 'Metrics · Logs · Traces · Alerts',
+        color: '#F87171',
+        tools: ['Prometheus', 'Grafana', 'ELK Stack', 'Datadog', 'Jaeger', 'OpenTelemetry'],
+        description: 'Cross-cutting layer. Collects metrics, aggregates logs, and traces requests across all components. Enables alerting, debugging, and SLA tracking.',
+        why: 'Without observability you are flying blind in production. You cannot debug incidents or prove SLAs are met.',
+        responsibilities: [
+          'Collect time-series metrics (latency, error rate, CPU)',
+          'Aggregate and search application logs',
+          'Distributed tracing across service boundaries',
+          'Alert on SLO/SLA violations',
+        ],
+        arrow: null,
+      },
+    ];
+
+    function render() {
+      const container = document.getElementById('layers');
+
+      LAYERS.forEach(layer => {
+        const wrap = document.createElement('div');
+        wrap.className = 'layer-wrap';
+
+        const card = document.createElement('div');
+        card.className = 'layer-card';
+        card.style.setProperty('--c', layer.color);
+        card.innerHTML = `
+          <span class="layer-icon">${layer.icon}</span>
+          <div class="layer-info">
+            <div class="layer-name">${layer.name}</div>
+            <div class="layer-sub">${layer.sub}</div>
+          </div>
+          <div class="layer-tags">
+            ${layer.tools.slice(0, 3).map(t => `<span class="tag" style="--c:${layer.color}">${t}</span>`).join('')}
+            ${layer.tools.length > 3 ? `<span class="tag" style="--c:#555">+${layer.tools.length - 3}</span>` : ''}
+          </div>
+          <span class="chevron">▾</span>
+        `;
+
+        const details = document.createElement('div');
+        details.className = 'layer-details';
+        details.style.setProperty('--c', layer.color);
+        details.innerHTML = `
+          <div class="details-grid">
+            <div>
+              <div class="d-label">What it does</div>
+              <div class="d-text">${layer.description}</div>
+              <div class="why-box">💡 <strong>Why it matters:</strong> ${layer.why}</div>
+            </div>
+            <div>
+              <div class="d-label">Responsibilities</div>
+              <ul class="resp-list">
+                ${layer.responsibilities.map(r => `<li>${r}</li>`).join('')}
+              </ul>
+              <div class="d-label" style="margin-top:14px;">All tools / examples</div>
+              <div class="all-tags">
+                ${layer.tools.map(t => `<span class="tag" style="--c:${layer.color}">${t}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          const isOpen = details.classList.contains('show');
+          document.querySelectorAll('.layer-details.show').forEach(d => d.classList.remove('show'));
+          document.querySelectorAll('.layer-card.open').forEach(c => c.classList.remove('open'));
+          if (!isOpen) { details.classList.add('show'); card.classList.add('open'); }
+        });
+
+        wrap.appendChild(card);
+        wrap.appendChild(details);
+        container.appendChild(wrap);
+
+        if (layer.arrow) {
+          const conn = document.createElement('div');
+          conn.className = 'connector';
+          conn.innerHTML = `<span class="conn-label">${layer.arrow}</span>`;
+          container.appendChild(conn);
+        }
+      });
+
+      const legend = document.getElementById('legend');
+      legend.innerHTML = `
+        <span class="legend-title">Layer types</span>
+        ${GROUPS.map(g => `
+          <div class="legend-item">
+            <div class="legend-dot" style="background:${g.color}"></div>
+            <span>${g.label}</span>
+          </div>`).join('')}
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>

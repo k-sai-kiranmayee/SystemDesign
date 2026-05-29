@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microservices Flow — End-to-End Request Lifecycle & Patterns</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+      background: #111317;
+      color: #e2e4e8;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+
+    .page { max-width: 1320px; margin: 0 auto; }
+
+    h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+    .info-bar {
+      background: #1a2a1a;
+      border: 1px solid #34D39940;
+      border-left: 4px solid #34D399;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #a8e8c0;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .arch-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media(max-width: 1100px) { .arch-layout { grid-template-columns: 1fr; } }
+
+    #diagram-wrap {
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      overflow: hidden;
+      padding: 0;
+    }
+    #diagram-svg { display: block; width: 100%; height: auto; }
+
+    .flow-node { cursor: pointer; }
+    .flow-node rect, .flow-node ellipse { transition: filter 0.15s, stroke-width 0.15s; }
+    .flow-node:hover rect, .flow-node:hover ellipse { filter: brightness(1.4); }
+    .flow-node.selected rect, .flow-node.selected ellipse { stroke-width: 3 !important; filter: brightness(1.5); }
+
+    @keyframes dash-flow {
+      to { stroke-dashoffset: -20; }
+    }
+    .animated-edge {
+      animation: dash-flow 1.2s linear infinite;
+    }
+
+    .detail-panel {
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      overflow: hidden;
+      position: sticky;
+      top: 24px;
+    }
+    .panel-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #2a2d35;
+    }
+    .panel-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .panel-name { font-size: 15px; font-weight: 600; color: #f0f0f0; }
+    .panel-sub { font-size: 11px; color: #999; margin-top: 2px; }
+    .panel-body { padding: 16px 18px; max-height: 620px; overflow-y: auto; }
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    .p-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: #8a8f9a; margin: 0 0 6px;
+    }
+    .p-text { font-size: 12.5px; color: #bbb; line-height: 1.7; margin-bottom: 14px; }
+
+    .resp-list { list-style: none; padding: 0; margin: 0 0 14px; }
+    .resp-list li {
+      font-size: 12px; color: #ccc; padding: 3px 0 3px 16px; position: relative; line-height: 1.5;
+    }
+    .resp-list li::before { content: '\2192'; position: absolute; left: 0; color: var(--dc, #2297F6); }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: color-mix(in srgb, var(--dc, #2297F6) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--dc, #2297F6) 35%, transparent);
+      color: var(--dc, #2297F6);
+    }
+
+    .pattern-box {
+      background: #161922;
+      border: 1px solid #2a2d35;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .pattern-box h4 { font-size: 12px; color: #f0f0f0; margin-bottom: 4px; }
+    .pattern-box p { font-size: 11.5px; color: #999; line-height: 1.6; }
+
+    .when-box {
+      background: #1a2520;
+      border: 1px solid #34D39930;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #a8e8c0;
+      line-height: 1.6;
+    }
+
+    .empty-hint {
+      padding: 50px 20px; text-align: center;
+      font-size: 13px; color: #888; line-height: 1.8;
+    }
+    .empty-hint .big { font-size: 36px; margin-bottom: 10px; }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px;
+      padding: 12px 16px; background: #1a1d23;
+      border: 1px solid #2a2d35; border-radius: 10px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #aaa; }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .leg-line { width: 24px; height: 2px; }
+    .leg-solid { background: #2297F6; }
+    .leg-dashed { border-top: 2px dashed #FBBF24; height: 0; }
+    .leg-animated { background: linear-gradient(90deg, #34D399, #22D3EE); }
+
+    .step-num {
+      font-size: 9px; font-weight: 700; fill: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Microservices — End-to-End Request Flow & Patterns</h1>
+    <p class="subtitle">Trace a request from client to response. Click any stage to explore the patterns involved.</p>
+
+    <div class="info-bar">
+      <strong>Follow the numbered flow</strong> from Client (1) through the system and back.
+      Each node reveals the architectural patterns active at that stage.
+      &nbsp;·&nbsp; <strong>Solid lines</strong> = synchronous &nbsp;·&nbsp;
+      <strong>Dashed lines</strong> = async events &nbsp;·&nbsp;
+      <strong>Animated lines</strong> = request path
+    </div>
+
+    <div class="arch-layout">
+      <div id="diagram-wrap">
+        <svg id="diagram-svg" viewBox="0 0 880 740" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#2297F6"/></marker>
+            <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#34D399"/></marker>
+            <marker id="arr-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#A78BFA"/></marker>
+            <marker id="arr-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#FBBF24"/></marker>
+            <marker id="arr-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#F87171"/></marker>
+            <marker id="arr-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#22D3EE"/></marker>
+            <marker id="arr-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3z" fill="#64748b"/></marker>
+          </defs>
+
+          <!-- Edges rendered by JS -->
+          <g id="edges"></g>
+          <!-- Nodes rendered by JS -->
+          <g id="nodes"></g>
+        </svg>
+      </div>
+
+      <div id="detail-panel" class="detail-panel">
+        <div class="empty-hint">
+          <div class="big">&#9758;</div>
+          Click any node in the flow diagram to explore the patterns, responsibilities, and tools at that stage.
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="leg-dot" style="background:#2297F6"></div> Core / Gateway</div>
+      <div class="legend-item"><div class="leg-dot" style="background:#A78BFA"></div> Auth / Security</div>
+      <div class="legend-item"><div class="leg-dot" style="background:#34D399"></div> Data Layer</div>
+      <div class="legend-item"><div class="leg-dot" style="background:#FBBF24"></div> Async / Events</div>
+      <div class="legend-item"><div class="leg-dot" style="background:#F87171"></div> Resilience</div>
+      <div class="legend-item"><div class="leg-dot" style="background:#22D3EE"></div> Infrastructure</div>
+      <div class="legend-item"><div class="leg-line leg-solid"></div> Sync call</div>
+      <div class="legend-item"><div class="leg-line leg-dashed"></div> Async event</div>
+      <div class="legend-item"><div class="leg-line leg-animated"></div> Request path</div>
+    </div>
+  </div>
+
+  <script>
+    const NODES = [
+      {
+        id: 'client', label: 'Client App', step: 1,
+        x: 340, y: 20, w: 180, h: 50, color: '#2297F6', shape: 'rect',
+        description: 'The user-facing application (SPA, mobile app, or third-party consumer) initiates an HTTP/HTTPS request. The client never talks directly to microservices — only through the gateway.',
+        patterns: [
+          { name: 'Backend for Frontend (BFF)', desc: 'Tailored API layers per client type (web, mobile, IoT) so each gets only the data shape it needs.' },
+          { name: 'Client-side Discovery', desc: 'In some architectures the client queries a registry and picks an instance directly (less common with API gateways).' },
+        ],
+        whenToUse: 'Every request starts here. The client holds a JWT or session token obtained from Auth and includes it in every API call.',
+        responsibilities: ['Render UI / handle user input', 'Store and refresh auth tokens', 'Retry with exponential backoff on 5xx', 'Optimistic UI updates'],
+        tools: ['React', 'Vue.js', 'React Native', 'Flutter', 'Axios', 'TanStack Query'],
+      },
+      {
+        id: 'dns-lb', label: 'DNS & Load Balancer', step: 2,
+        x: 340, y: 110, w: 180, h: 50, color: '#22D3EE', shape: 'rect',
+        description: 'DNS resolves the domain to the load balancer\'s IP. The LB distributes traffic across API Gateway instances using health checks and routing algorithms.',
+        patterns: [
+          { name: 'Server-side Load Balancing', desc: 'A centralized LB (ALB/NLB, HAProxy, Nginx) routes requests based on round-robin, least-connections, or weighted algorithms.' },
+          { name: 'Health Checks', desc: 'LB pings /health endpoints; unhealthy instances are removed from the pool automatically.' },
+          { name: 'SSL/TLS Termination', desc: 'TLS is terminated at the LB layer, offloading crypto from downstream services.' },
+        ],
+        whenToUse: 'Always present in production. Provides high availability, auto-scaling support, and a single stable entry point for clients.',
+        responsibilities: ['DNS resolution (A/CNAME records)', 'Distribute traffic across gateway instances', 'SSL termination', 'DDoS mitigation (rate limit at edge)', 'Sticky sessions (if needed)'],
+        tools: ['AWS ALB/NLB', 'Cloudflare', 'Nginx', 'HAProxy', 'Google Cloud LB', 'Traefik'],
+      },
+      {
+        id: 'api-gw', label: 'API Gateway', step: 3,
+        x: 340, y: 200, w: 180, h: 50, color: '#2297F6', shape: 'rect',
+        description: 'Single entry point that handles cross-cutting concerns: authentication, rate limiting, request routing, protocol translation, and response aggregation. Decouples clients from the internal service topology.',
+        patterns: [
+          { name: 'API Gateway Pattern', desc: 'One unified entry point for all clients. Routes requests to the appropriate service, composes responses from multiple services, and handles cross-cutting concerns.' },
+          { name: 'Rate Limiting & Throttling', desc: 'Token bucket or sliding window algorithms limit requests per client/API key to protect downstream services from overload.' },
+          { name: 'Request Aggregation', desc: 'Gateway can fan out to multiple services and merge their responses into a single API call for the client.' },
+        ],
+        whenToUse: 'Use always in microservices. It prevents clients from needing to know internal service addresses and centralizes auth, logging, and rate limiting.',
+        responsibilities: ['Route requests to correct microservice', 'Validate JWT tokens (call Auth service)', 'Rate limiting per API key/client', 'Request/response transformation', 'API versioning', 'Circuit breaking on downstream failures'],
+        tools: ['Kong', 'AWS API Gateway', 'Apigee', 'Traefik', 'APISIX', 'Envoy'],
+      },
+      {
+        id: 'auth', label: 'Auth & Security', step: 4,
+        x: 620, y: 170, w: 170, h: 50, color: '#A78BFA', shape: 'rect',
+        description: 'The gateway validates the JWT/OAuth token by calling or verifying against the Auth service. Handles authentication (who are you?) and authorization (what can you do?).',
+        patterns: [
+          { name: 'Token-based Auth (JWT)', desc: 'Stateless tokens signed by the auth service. Gateway verifies signature without hitting a DB on every request.' },
+          { name: 'OAuth 2.0 / OIDC', desc: 'Delegated authorization framework. Supports SSO, third-party access, and scoped permissions.' },
+          { name: 'mTLS (Service-to-Service)', desc: 'Mutual TLS between services ensures identity at the transport level inside the mesh.' },
+        ],
+        whenToUse: 'Every authenticated request passes through here. Token validation is the first check before any business logic executes.',
+        responsibilities: ['Issue JWT access + refresh tokens', 'Validate token signatures and expiry', 'RBAC / scope enforcement', 'OAuth 2.0 flows (authorization code, client credentials)', 'Token revocation'],
+        tools: ['Keycloak', 'Auth0', 'AWS Cognito', 'Okta', 'Open Policy Agent (OPA)'],
+      },
+      {
+        id: 'discovery', label: 'Service Discovery', step: 5,
+        x: 80, y: 290, w: 170, h: 50, color: '#22D3EE', shape: 'rect',
+        description: 'The gateway (or service mesh sidecar) looks up the target service\'s network location from the registry. Services register on startup and deregister on shutdown.',
+        patterns: [
+          { name: 'Service Registry', desc: 'A dedicated component (Consul, Eureka) maintains a live map of service instances and their health status.' },
+          { name: 'Client-side Discovery', desc: 'The caller queries the registry and picks an instance. Requires a client-side load balancer.' },
+          { name: 'Server-side Discovery', desc: 'A router/LB queries the registry on behalf of the caller. Simpler for clients but adds a hop.' },
+        ],
+        whenToUse: 'Essential when services scale horizontally. Without it, you\'d need hardcoded IPs that break on every deployment.',
+        responsibilities: ['Register service instances on boot', 'Health-check and deregister failed instances', 'Provide instance list for load balancing', 'Distribute config (KV store in Consul)'],
+        tools: ['HashiCorp Consul', 'Netflix Eureka', 'Kubernetes Service + CoreDNS', 'etcd', 'Apache ZooKeeper'],
+      },
+      {
+        id: 'service-mesh', label: 'Service Mesh', step: 6,
+        x: 80, y: 380, w: 170, h: 50, color: '#22D3EE', shape: 'rect',
+        description: 'A dedicated infrastructure layer (sidecar proxies) handling service-to-service communication: retries, timeouts, mutual TLS, observability, and traffic shaping — without changing application code.',
+        patterns: [
+          { name: 'Sidecar Proxy', desc: 'Each service pod gets a proxy (Envoy) that intercepts all network traffic. The app talks to localhost; the sidecar handles routing, retries, and mTLS.' },
+          { name: 'Traffic Shaping', desc: 'Canary releases, blue-green deployments, and A/B routing are controlled at the mesh level via config, not code.' },
+          { name: 'Observability Injection', desc: 'Sidecars automatically emit metrics, traces, and access logs without app instrumentation.' },
+        ],
+        whenToUse: 'Adopt when you have 10+ services and need uniform security, observability, and traffic control without burdening each team.',
+        responsibilities: ['mTLS between all services', 'Automatic retries and timeouts', 'Distributed tracing propagation', 'Traffic splitting for canary deploys', 'Access policy enforcement'],
+        tools: ['Istio', 'Linkerd', 'Consul Connect', 'AWS App Mesh', 'Envoy (data plane)'],
+      },
+      {
+        id: 'microservice', label: 'Microservice', step: 7,
+        x: 340, y: 330, w: 180, h: 55, color: '#2297F6', shape: 'rect',
+        description: 'The target microservice receives the routed request. It owns a single bounded context, executes business logic, persists data to its own database, and may publish events for other services.',
+        patterns: [
+          { name: 'Single Responsibility / Bounded Context', desc: 'Each service owns one domain (Orders, Payments, Users). Teams can deploy independently without coordinating.' },
+          { name: 'Database per Service', desc: 'Each service has its own DB schema. No shared tables — data is exchanged via APIs or events.' },
+          { name: 'Strangler Fig', desc: 'Legacy monolith is gradually replaced by extracting functionality into new microservices behind a routing layer.' },
+        ],
+        whenToUse: 'This is where your business logic lives. Design services around business capabilities, not technical layers.',
+        responsibilities: ['Execute domain business logic', 'Validate input (schema + business rules)', 'Persist to own database', 'Publish domain events', 'Call other services if needed (via mesh)'],
+        tools: ['Spring Boot', 'Node.js / Express', 'Go', 'FastAPI (Python)', '.NET', 'gRPC'],
+      },
+      {
+        id: 'circuit-breaker', label: 'Circuit Breaker', step: '7a',
+        x: 600, y: 295, w: 170, h: 50, color: '#F87171', shape: 'rect',
+        description: 'When a downstream dependency fails repeatedly, the circuit "opens" and immediately returns a fallback — preventing cascading failures and giving the failing service time to recover.',
+        patterns: [
+          { name: 'Circuit Breaker', desc: 'States: Closed (normal) → Open (failing, fast-fail) → Half-Open (test recovery). Prevents thundering herd on a failing service.' },
+          { name: 'Bulkhead Isolation', desc: 'Partition resources (thread pools, connection pools) per dependency so one failing service can\'t exhaust all resources.' },
+          { name: 'Retry with Backoff', desc: 'Transient failures get retried with exponential backoff + jitter. Combined with circuit breaker to avoid retrying when circuit is open.' },
+          { name: 'Timeout Policy', desc: 'Every outbound call has a deadline. If exceeded, fail fast rather than blocking threads.' },
+        ],
+        whenToUse: 'Wrap every inter-service call. Without it, one slow/failing service can cascade and bring down the entire system.',
+        responsibilities: ['Monitor failure rate of outbound calls', 'Open circuit when threshold exceeded', 'Return fallback response to caller', 'Periodically test recovery (half-open)', 'Emit metrics on circuit state changes'],
+        tools: ['Resilience4j', 'Hystrix (deprecated)', 'Polly (.NET)', 'Envoy (mesh-level)', 'Sentinel'],
+      },
+      {
+        id: 'database', label: 'Service Database', step: 8,
+        x: 340, y: 440, w: 180, h: 50, color: '#34D399', shape: 'rect',
+        description: 'Each microservice owns its database (relational or NoSQL). This ensures loose coupling — services can evolve their schemas independently. Data consistency across services is achieved via events, not shared DB.',
+        patterns: [
+          { name: 'Database per Service', desc: 'Hard boundary: no service reads another\'s DB directly. Changes are communicated via APIs or domain events.' },
+          { name: 'CQRS (Command Query Responsibility Segregation)', desc: 'Separate the write model (commands) from the read model (queries). Allows optimized read replicas and different storage engines per side.' },
+          { name: 'Event Sourcing', desc: 'Instead of storing current state, store the sequence of events that produced it. Enables audit trails, temporal queries, and event replay.' },
+          { name: 'Saga Pattern', desc: 'Distributed transactions across services using a sequence of local transactions + compensating actions on failure. Orchestration (central coordinator) or Choreography (event-driven).' },
+        ],
+        whenToUse: 'Every service that persists data. Choose SQL for ACID needs, NoSQL for scale/flexibility. Use sagas instead of distributed transactions.',
+        responsibilities: ['ACID transactions within service boundary', 'Schema migrations (owned by service team)', 'Read replicas for query scaling', 'Backup and disaster recovery', 'Connection pooling'],
+        tools: ['PostgreSQL', 'MySQL', 'MongoDB', 'DynamoDB', 'Redis (cache)', 'Cassandra'],
+      },
+      {
+        id: 'event-bus', label: 'Event Bus / Broker', step: 9,
+        x: 340, y: 545, w: 180, h: 50, color: '#FBBF24', shape: 'rect',
+        description: 'After processing, the service publishes domain events (OrderPlaced, PaymentSucceeded) to the message broker. Subscribers react independently — enabling temporal decoupling and fan-out.',
+        patterns: [
+          { name: 'Event-Driven Architecture', desc: 'Services communicate via events rather than direct calls. Reduces coupling: the publisher doesn\'t know or care who consumes.' },
+          { name: 'Pub/Sub & Topic-based Routing', desc: 'Events are published to topics. Multiple consumer groups can subscribe independently, each processing at their own pace.' },
+          { name: 'Outbox Pattern', desc: 'Write the event to a local "outbox" table in the same DB transaction as the business data. A separate process relays it to the broker — guarantees at-least-once delivery without 2PC.' },
+          { name: 'Dead Letter Queue (DLQ)', desc: 'Failed messages are routed to a DLQ for manual inspection instead of blocking the main queue.' },
+        ],
+        whenToUse: 'Use for any cross-service data propagation that doesn\'t need synchronous response. Critical for eventual consistency.',
+        responsibilities: ['Accept and persist published events', 'Guarantee at-least-once delivery', 'Fan-out to multiple consumer groups', 'Retain events for replay (configurable)', 'Partition for parallel consumption'],
+        tools: ['Apache Kafka', 'RabbitMQ', 'AWS SQS + SNS', 'NATS JetStream', 'Google Pub/Sub', 'Pulsar'],
+      },
+      {
+        id: 'consumers', label: 'Downstream Services', step: 10,
+        x: 620, y: 545, w: 170, h: 50, color: '#FBBF24', shape: 'rect',
+        description: 'Other microservices subscribe to relevant events and react: Notification service sends emails, Analytics ingests data, Inventory adjusts stock. Each processes events independently at its own pace.',
+        patterns: [
+          { name: 'Choreography-based Saga', desc: 'Each service listens for events and decides what to do next. No central coordinator — the workflow emerges from event reactions.' },
+          { name: 'Idempotent Consumer', desc: 'Consumers must handle duplicate messages gracefully (at-least-once delivery means duplicates are inevitable). Use idempotency keys.' },
+          { name: 'Competing Consumers', desc: 'Multiple instances of the same service consume from the same partition/queue for parallel processing and fault tolerance.' },
+        ],
+        whenToUse: 'Any service that needs to react to another service\'s state changes without being directly called.',
+        responsibilities: ['Subscribe to relevant event topics', 'Process events idempotently', 'Handle failures with retry + DLQ', 'Maintain own read model / projection', 'Acknowledge messages after processing'],
+        tools: ['Kafka Consumer Groups', 'RabbitMQ Consumers', 'AWS Lambda (event trigger)', 'Spring Cloud Stream'],
+      },
+      {
+        id: 'observability', label: 'Observability', step: 11,
+        x: 80, y: 500, w: 170, h: 50, color: '#22D3EE', shape: 'rect',
+        description: 'Throughout the entire flow, distributed tracing, structured logging, and metrics collection provide visibility into system health, latency, and errors across all services.',
+        patterns: [
+          { name: 'Distributed Tracing', desc: 'A unique trace ID propagates through every service hop. Visualize the full request path and identify bottlenecks.' },
+          { name: 'Centralized Logging', desc: 'All services emit structured logs (JSON) shipped to a central platform. Correlate logs across services using trace IDs.' },
+          { name: 'Metrics & Alerting', desc: 'RED metrics (Rate, Errors, Duration) per service. Dashboards and alerts on SLO breaches.' },
+          { name: 'Health Checks & Readiness Probes', desc: 'Liveness (is it running?) and readiness (can it serve?) probes for orchestrators to manage instance lifecycle.' },
+        ],
+        whenToUse: 'Non-negotiable in production microservices. Without observability, debugging distributed systems is nearly impossible.',
+        responsibilities: ['Propagate trace context (W3C Trace Context)', 'Emit structured logs with correlation IDs', 'Export metrics (Prometheus format)', 'Dashboards for golden signals', 'Alerting on SLO/SLA breaches'],
+        tools: ['OpenTelemetry', 'Jaeger / Zipkin', 'Prometheus + Grafana', 'ELK Stack', 'Datadog', 'AWS X-Ray'],
+      },
+      {
+        id: 'response', label: 'Response to Client', step: 12,
+        x: 340, y: 650, w: 180, h: 50, color: '#2297F6', shape: 'rect',
+        description: 'The response travels back up through the chain: Service → Gateway → LB → Client. The gateway may transform, cache, or compress the response before returning it.',
+        patterns: [
+          { name: 'Response Caching', desc: 'Gateway or CDN caches responses for idempotent GET requests. Reduces load on services and improves latency.' },
+          { name: 'Response Compression', desc: 'gzip/brotli compression at the gateway level reduces payload size for clients on slow networks.' },
+          { name: 'Graceful Degradation', desc: 'If a non-critical downstream service fails, return partial data with a degraded flag rather than a full error.' },
+        ],
+        whenToUse: 'Every request ends here. Optimize for latency (caching, compression) and resilience (partial responses, fallbacks).',
+        responsibilities: ['Aggregate responses from multiple services', 'Apply response transformation', 'Set cache headers', 'Compress payload', 'Return appropriate HTTP status codes'],
+        tools: ['CDN (CloudFront, Cloudflare)', 'Redis (response cache)', 'Gateway response plugins'],
+      },
+    ];
+
+    const EDGES = [
+      { from: 'client', to: 'dns-lb', stroke: '#2297F6', animated: true, marker: 'arr-blue' },
+      { from: 'dns-lb', to: 'api-gw', stroke: '#2297F6', animated: true, marker: 'arr-blue' },
+      { from: 'api-gw', to: 'auth', stroke: '#A78BFA', animated: false, marker: 'arr-purple' },
+      { from: 'api-gw', to: 'microservice', stroke: '#2297F6', animated: true, marker: 'arr-blue',
+        path: 'M 430,250 L 430,330' },
+      { from: 'discovery', to: 'api-gw', stroke: '#22D3EE', animated: false, marker: 'arr-cyan',
+        path: 'M 250,310 L 340,230' },
+      { from: 'service-mesh', to: 'microservice', stroke: '#22D3EE', animated: false, marker: 'arr-cyan',
+        path: 'M 250,405 L 340,357' },
+      { from: 'microservice', to: 'circuit-breaker', stroke: '#F87171', animated: false, marker: 'arr-red',
+        path: 'M 520,345 L 600,325' },
+      { from: 'microservice', to: 'database', stroke: '#34D399', animated: true, marker: 'arr-green' },
+      { from: 'microservice', to: 'event-bus', stroke: '#FBBF24', animated: false, dashed: true, marker: 'arr-orange',
+        path: 'M 430,385 L 430,545' },
+      { from: 'event-bus', to: 'consumers', stroke: '#FBBF24', animated: false, dashed: true, marker: 'arr-orange' },
+      { from: 'observability', to: 'microservice', stroke: '#22D3EE', animated: false, dashed: true, marker: 'arr-cyan',
+        path: 'M 200,500 L 200,357 L 340,357' },
+      { from: 'database', to: 'response', stroke: '#2297F6', animated: true, marker: 'arr-blue',
+        path: 'M 380,490 L 380,545 L 300,545 L 300,675 L 340,675' },
+    ];
+
+    function cx(n) { return n.x + n.w / 2; }
+    function cy(n) { return n.y + n.h / 2; }
+
+    function getNode(id) { return NODES.find(n => n.id === id); }
+
+    let selectedId = null;
+
+    function render() {
+      const edgeG = document.getElementById('edges');
+      const nodeG = document.getElementById('nodes');
+
+      let edgeHTML = '';
+      EDGES.forEach(e => {
+        const a = getNode(e.from), b = getNode(e.to);
+        if (!a || !b) return;
+        const dashArray = e.dashed ? '6,4' : (e.animated ? '6,4' : 'none');
+        const animClass = e.animated ? 'animated-edge' : '';
+
+        if (e.path) {
+          edgeHTML += `<path d="${e.path}" stroke="${e.stroke}" stroke-width="1.5" fill="none" stroke-dasharray="${dashArray}" class="${animClass}" marker-end="url(#${e.marker})"/>`;
+        } else {
+          const x1 = cx(a), y1 = a.y + a.h;
+          const x2 = cx(b), y2 = b.y;
+          edgeHTML += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${e.stroke}" stroke-width="1.5" stroke-dasharray="${dashArray}" class="${animClass}" marker-end="url(#${e.marker})"/>`;
+        }
+      });
+      edgeG.innerHTML = edgeHTML;
+
+      let nodeHTML = '';
+      NODES.forEach(node => {
+        const midX = cx(node);
+        const labelY = node.y + 22;
+        const stepX = node.x + 12;
+        const stepY = node.y + 14;
+
+        nodeHTML += `<g class="flow-node" id="node-${node.id}">
+          <rect x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="8" fill="#1c2235" stroke="${node.color}" stroke-width="2"/>
+          <circle cx="${stepX}" cy="${stepY}" r="9" fill="${node.color}" opacity="0.9"/>
+          <text x="${stepX}" y="${stepY + 3.5}" text-anchor="middle" class="step-num">${node.step}</text>
+          <text x="${midX + 8}" y="${labelY}" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600" font-family="Inter,system-ui,sans-serif">${node.label}</text>
+        </g>`;
+      });
+      nodeG.innerHTML = nodeHTML;
+
+      NODES.forEach(node => {
+        const g = document.getElementById('node-' + node.id);
+        if (g) g.addEventListener('click', () => selectNode(node));
+      });
+    }
+
+    function selectNode(node) {
+      if (selectedId) {
+        const prev = document.getElementById('node-' + selectedId);
+        if (prev) prev.classList.remove('selected');
+      }
+      selectedId = node.id;
+      document.getElementById('node-' + node.id).classList.add('selected');
+      showPanel(node);
+    }
+
+    function showPanel(node) {
+      const panel = document.getElementById('detail-panel');
+      panel.style.setProperty('--dc', node.color);
+
+      const patternsHTML = node.patterns.map(p =>
+        `<div class="pattern-box"><h4>${p.name}</h4><p>${p.desc}</p></div>`
+      ).join('');
+
+      panel.innerHTML = `
+        <div class="panel-header">
+          <div class="panel-dot" style="background:${node.color}"></div>
+          <div>
+            <div class="panel-name">Step ${node.step}: ${node.label}</div>
+            <div class="panel-sub">Click another node to compare</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <p class="p-label">What happens here</p>
+          <p class="p-text">${node.description}</p>
+
+          <p class="p-label">When to use</p>
+          <div class="when-box">${node.whenToUse}</div>
+
+          <p class="p-label">Patterns at this stage</p>
+          ${patternsHTML}
+
+          <p class="p-label" style="margin-top:14px">Responsibilities</p>
+          <ul class="resp-list">
+            ${node.responsibilities.map(r => `<li>${r}</li>`).join('')}
+          </ul>
+
+          <p class="p-label">Tools & Technologies</p>
+          <div class="tag-row">
+            ${node.tools.map(t => `<span class="tag">${t}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>

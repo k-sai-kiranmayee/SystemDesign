@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete System Design Map</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+      background: #111317;
+      color: #e2e4e8;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+
+    .page { max-width: 1280px; margin: 0 auto; }
+
+    h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media(max-width:1060px) { .layout { grid-template-columns: 1fr; } }
+
+    /* ---- Map canvas ---- */
+    #map-wrap {
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: grab;
+      position: relative;
+    }
+    #map-wrap:active { cursor: grabbing; }
+    #map-svg { display: block; width: 100%; }
+
+    .b-node { cursor: pointer; }
+    .b-node circle, .b-node rect { transition: filter 0.15s; }
+    .b-node:hover circle, .b-node.selected circle { filter: brightness(1.4); }
+    .b-node:hover rect,  .b-node.selected rect  { filter: brightness(1.35); }
+
+    /* Sub-node groups — hidden by default, shown only for selected branch */
+    .sub-group {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .sub-group.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ---- Info panel ---- */
+    .info-panel {
+      background: #1a1d23;
+      border: 1px solid #2a2d35;
+      border-radius: 12px;
+      overflow: hidden;
+      position: sticky;
+      top: 24px;
+    }
+    .info-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px; border-bottom: 1px solid #2a2d35;
+    }
+    .info-icon { font-size: 20px; }
+    .info-name { font-size: 14px; font-weight: 600; color: #f0f0f0; }
+    .info-sub  { font-size: 11px; color: #666; margin-top: 2px; }
+    .info-body { padding: 16px 18px; max-height: 600px; overflow-y: auto; }
+    .info-body::-webkit-scrollbar { width: 4px; }
+    .info-body::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    .i-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: #555; margin: 0 0 6px;
+    }
+    .i-text { font-size: 12px; color: #bbb; line-height: 1.7; margin-bottom: 14px; }
+
+    .sub-list { display: flex; flex-direction: column; gap: 6px; }
+    .sub-item {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid var(--bc, #2297F6);
+      border-radius: 0 6px 6px 0;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .sub-item:hover { background: rgba(255,255,255,0.06); }
+    .sub-item.active { background: var(--bc, #2297F6)15; }
+    .sub-name { font-size: 12px; font-weight: 600; color: #ddd; }
+    .sub-tools { font-size: 11px; color: #666; margin-top: 2px; }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: var(--bc, #2297F6)18;
+      border: 1px solid var(--bc, #2297F6)50;
+      color: var(--bc, #2297F6);
+    }
+
+    .empty-hint {
+      padding: 40px 20px; text-align: center;
+      font-size: 12px; color: #555; line-height: 1.8;
+    }
+    .empty-hint .big { font-size: 32px; margin-bottom: 10px; }
+
+    .hint-bar {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px;
+      padding: 10px 14px; background: #1a1d23;
+      border: 1px solid #2a2d35; border-radius: 10px;
+      font-size: 11px; color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Complete System Design — Mind Map</h1>
+    <p class="subtitle">Click any branch or concept node · Drag to pan · Scroll to zoom</p>
+
+    <div class="layout">
+      <div id="map-wrap">
+        <svg id="map-svg" viewBox="-660 -460 1320 920"
+             width="100%" height="720" xmlns="http://www.w3.org/2000/svg">
+          <g id="root">
+            <g id="connections"></g>
+            <g id="nodes"></g>
+          </g>
+        </svg>
+      </div>
+
+      <div id="info-panel" class="info-panel">
+        <div class="empty-hint">
+          <div class="big">🗺️</div>
+          Click any coloured branch circle to explore that domain, or click a concept node for tool details.
+        </div>
+      </div>
+    </div>
+
+    <div class="hint-bar">
+      <span>🖱️ Drag to pan</span>
+      <span>🔍 Scroll to zoom</span>
+      <span>⬤ Click branch = domain overview</span>
+      <span>▭ Click concept = tools &amp; detail</span>
+    </div>
+  </div>
+
+  <script>
+    const BRANCHES = [
+      {
+        id: 'frontend', label: 'Frontend', icon: '🎨', color: '#2297F6',
+        description: 'Everything users see and touch. Covers UI frameworks, rendering strategies, state management, and build tooling.',
+        subnodes: [
+          { name: 'SPA Frameworks',    tools: 'React, Vue.js, Angular, Svelte' },
+          { name: 'SSR / SSG',         tools: 'Next.js, Nuxt, Astro, SvelteKit' },
+          { name: 'State Management',  tools: 'Redux, Zustand, Pinia, Jotai' },
+          { name: 'Build & Bundle',    tools: 'Vite, Webpack, Rollup, esbuild' },
+          { name: 'PWA / Offline',     tools: 'Service Worker, Workbox, IndexedDB' },
+        ],
+      },
+      {
+        id: 'networking', label: 'Networking', icon: '🌐', color: '#06B6D4',
+        description: 'How requests travel from user to server. Covers DNS, CDN, load balancing, and transport protocols.',
+        subnodes: [
+          { name: 'DNS',               tools: 'Route 53, Cloudflare DNS, NS1' },
+          { name: 'CDN / Edge',        tools: 'CloudFront, Fastly, Cloudflare, Akamai' },
+          { name: 'Load Balancing',    tools: 'Nginx, HAProxy, AWS ALB, GCP LB' },
+          { name: 'Protocols',         tools: 'HTTP/2, HTTP/3 (QUIC), WebSocket, gRPC' },
+          { name: 'SSL / TLS',         tools: "Let's Encrypt, ACM, Certbot" },
+        ],
+      },
+      {
+        id: 'backend', label: 'Backend', icon: '⚙️', color: '#A78BFA',
+        description: 'Server-side logic that processes requests, enforces business rules, coordinates data, and returns responses.',
+        subnodes: [
+          { name: 'REST APIs',         tools: 'Express, FastAPI, Spring Boot, Django REST' },
+          { name: 'GraphQL',           tools: 'Apollo Server, Hasura, Strawberry' },
+          { name: 'gRPC',              tools: 'grpc-go, grpc-java, grpc-node' },
+          { name: 'Microservices',     tools: 'Docker, Kubernetes, Istio, service mesh' },
+          { name: 'Serverless',        tools: 'AWS Lambda, Cloudflare Workers, Vercel Fn' },
+        ],
+      },
+      {
+        id: 'data', label: 'Data Storage', icon: '🗄️', color: '#34D399',
+        description: 'Where data lives persistently. SQL vs NoSQL vs object storage — choosing the right store is a critical architectural decision.',
+        subnodes: [
+          { name: 'Relational (SQL)',  tools: 'PostgreSQL, MySQL, CockroachDB' },
+          { name: 'Document (NoSQL)',  tools: 'MongoDB, Firestore, CouchDB' },
+          { name: 'Wide-Column',       tools: 'Cassandra, HBase, Bigtable' },
+          { name: 'Key-Value',         tools: 'DynamoDB, Redis, ScyllaDB' },
+          { name: 'Object Storage',    tools: 'Amazon S3, GCS, Azure Blob, R2' },
+          { name: 'Data Warehouse',    tools: 'BigQuery, Snowflake, Redshift' },
+        ],
+      },
+      {
+        id: 'caching', label: 'Caching', icon: '💾', color: '#FBBF24',
+        description: 'Storing data closer to the consumer to avoid expensive recomputation or DB reads. Multiple cache levels exist: client, CDN, app, and DB.',
+        subnodes: [
+          { name: 'In-Memory Cache',   tools: 'Redis, Memcached, Hazelcast' },
+          { name: 'CDN Cache',         tools: 'CloudFront, Fastly (edge TTL)' },
+          { name: 'Browser Cache',     tools: 'Cache-Control, ETag, Service Worker' },
+          { name: 'DB Query Cache',    tools: 'DynamoDB DAX, PgBouncer, MySQL cache' },
+          { name: 'Cache Patterns',    tools: 'Cache-Aside, Write-Through, Read-Through' },
+        ],
+      },
+      {
+        id: 'messaging', label: 'Messaging', icon: '📨', color: '#FBBF24',
+        description: 'Async communication between services. Decouples producers from consumers, buffers load spikes, and enables event-driven architectures.',
+        subnodes: [
+          { name: 'Message Queue',     tools: 'RabbitMQ, AWS SQS, ActiveMQ' },
+          { name: 'Event Streaming',   tools: 'Apache Kafka, Kinesis, Pulsar' },
+          { name: 'Pub / Sub',         tools: 'AWS SNS, Google Pub/Sub, NATS' },
+          { name: 'WebSockets',        tools: 'Socket.io, WS, AWS API GW WS' },
+          { name: 'WebHooks',          tools: 'HTTP callbacks, Svix, Standard Webhooks' },
+        ],
+      },
+      {
+        id: 'security', label: 'Security', icon: '🔐', color: '#F87171',
+        description: 'Protecting the system from unauthorised access, data breaches, and abuse. Spans identity, network, and application layers.',
+        subnodes: [
+          { name: 'Authentication',    tools: 'OAuth 2.0, OIDC, JWT, Keycloak, Auth0' },
+          { name: 'Authorisation',     tools: 'RBAC, ABAC, OPA, Casbin' },
+          { name: 'Encryption',        tools: 'TLS 1.3, AES-256, KMS, HashiCorp Vault' },
+          { name: 'Rate Limiting',     tools: 'Kong, Nginx, Redis (token bucket)' },
+          { name: 'WAF / DDoS',        tools: 'Cloudflare WAF, AWS Shield, Fastly WAF' },
+        ],
+      },
+      {
+        id: 'scalability', label: 'Scalability', icon: '📈', color: '#A78BFA',
+        description: 'Designing to handle growing load. Horizontal scaling adds instances; sharding splits data for write scalability.',
+        subnodes: [
+          { name: 'Horizontal Scaling', tools: 'Auto Scaling Groups, K8s HPA' },
+          { name: 'Vertical Scaling',  tools: 'Right-sizing EC2/GCE/VMs' },
+          { name: 'Sharding',          tools: 'Consistent hashing, range/hash-based' },
+          { name: 'CQRS',             tools: 'Separate Read/Write models, Event Sourcing' },
+          { name: 'Rate Limiting',     tools: 'Token bucket, leaky bucket, sliding window' },
+        ],
+      },
+      {
+        id: 'reliability', label: 'Reliability', icon: '🛡️', color: '#34D399',
+        description: 'Keeping the system available and correct despite partial failures. Fault isolation, graceful degradation, and automated recovery.',
+        subnodes: [
+          { name: 'Circuit Breaker',   tools: 'Resilience4j, Hystrix, Istio, Envoy' },
+          { name: 'Retry & Backoff',   tools: 'Exponential backoff + jitter, idempotency' },
+          { name: 'Health Checks',     tools: 'K8s liveness/readiness probes, ELB health' },
+          { name: 'Bulkhead',          tools: 'Thread-pool isolation, semaphore limits' },
+          { name: 'SLA / SLO / SLI',  tools: 'Prometheus, Datadog, PagerDuty' },
+        ],
+      },
+      {
+        id: 'observability', label: 'Observability', icon: '📊', color: '#F87171',
+        description: 'Understanding what is happening inside the system in production. The three pillars: metrics (what), logs (why), traces (where).',
+        subnodes: [
+          { name: 'Metrics',           tools: 'Prometheus, Grafana, Datadog, CloudWatch' },
+          { name: 'Logging',           tools: 'ELK Stack, Loki, Splunk, Fluentd' },
+          { name: 'Distributed Tracing', tools: 'Jaeger, Zipkin, AWS X-Ray, OpenTelemetry' },
+          { name: 'Alerting',          tools: 'PagerDuty, Opsgenie, Grafana Alerts' },
+          { name: 'Dashboards',        tools: 'Grafana, Kibana, Datadog, New Relic' },
+        ],
+      },
+      {
+        id: 'infra', label: 'Infrastructure', icon: '🏗️', color: '#06B6D4',
+        description: 'The platform the app runs on. Containers, Kubernetes, CI/CD, and IaC enable fast and reproducible deployments.',
+        subnodes: [
+          { name: 'Cloud Providers',   tools: 'AWS, Google Cloud, Azure, Hetzner' },
+          { name: 'Containers',        tools: 'Docker, containerd, Podman' },
+          { name: 'Orchestration',     tools: 'Kubernetes, ECS, Nomad' },
+          { name: 'CI / CD',           tools: 'GitHub Actions, GitLab CI, ArgoCD, Flux' },
+          { name: 'IaC',               tools: 'Terraform, Pulumi, CDK, Ansible' },
+        ],
+      },
+    ];
+
+    const N  = BRANCHES.length;
+    const CX = 0, CY = 0;
+    const BR = 260;   // branch radius
+    const SR = 430;   // sub-node radius
+
+    BRANCHES.forEach((b, i) => {
+      const a = (i / N) * 2 * Math.PI - Math.PI / 2;
+      b.angle = a;
+      b.x = CX + BR * Math.cos(a);
+      b.y = CY + BR * Math.sin(a);
+      b.subnodes.forEach((s, j) => {
+        const spread = 0.28;
+        const sa = a + (j - (b.subnodes.length - 1) / 2) * spread;
+        s.x = CX + SR * Math.cos(sa);
+        s.y = CY + SR * Math.sin(sa);
+        s.color = b.color;
+        s.branchId = b.id;
+      });
+    });
+
+    function ns(tag, attrs, text) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+
+    let selectedEl = null;
+    let activeSub  = null;
+
+    function renderMap() {
+      const connG = document.getElementById('connections');
+      const nodeG = document.getElementById('nodes');
+
+      /* Center node */
+      const cg = ns('g', { class: 'b-node', id: 'node-center', cursor: 'pointer' });
+      cg.appendChild(ns('circle', { cx: 0, cy: 0, r: 52, fill: '#2297F618', stroke: '#2297F6', 'stroke-width': '2' }));
+      cg.appendChild(ns('text', { x: 0, y: -7, 'text-anchor': 'middle', fill: '#e8e8e8', 'font-size': '13', 'font-weight': '700', 'font-family': 'Inter,sans-serif' }, 'System'));
+      cg.appendChild(ns('text', { x: 0, y: 12, 'text-anchor': 'middle', fill: '#e8e8e8', 'font-size': '13', 'font-weight': '700', 'font-family': 'Inter,sans-serif' }, 'Design'));
+      cg.addEventListener('click', showHome);
+      nodeG.appendChild(cg);
+
+      BRANCHES.forEach(b => {
+        /* Center → branch connector (always visible) */
+        connG.appendChild(ns('line', {
+          x1: CX + 52 * Math.cos(b.angle), y1: CY + 52 * Math.sin(b.angle),
+          x2: b.x, y2: b.y,
+          stroke: b.color, 'stroke-width': '1.5', opacity: '.45',
+        }));
+
+        /* Sub-node group — hidden until this branch is selected */
+        const subGroup = ns('g', { class: 'sub-group', id: 'sub-group-' + b.id });
+
+        b.subnodes.forEach(s => {
+          /* Branch → sub-node connector */
+          subGroup.appendChild(ns('line', {
+            x1: b.x, y1: b.y, x2: s.x, y2: s.y,
+            stroke: b.color, 'stroke-width': '1', opacity: '.35', 'stroke-dasharray': '4,3',
+          }));
+
+          /* Sub-node */
+          const sg = ns('g', { class: 'b-node', id: 'sub-' + b.id + '-' + s.name.replace(/\W/g, '') });
+          sg.appendChild(ns('rect', {
+            x: s.x - 60, y: s.y - 16, width: 120, height: 32,
+            rx: 6, fill: b.color + '20', stroke: b.color, 'stroke-width': '1',
+          }));
+          sg.appendChild(ns('text', {
+            x: s.x, y: s.y - 3,
+            'text-anchor': 'middle', fill: '#ddd',
+            'font-size': '9.5', 'font-weight': '600', 'font-family': 'Inter,sans-serif',
+          }, s.name));
+          sg.appendChild(ns('text', {
+            x: s.x, y: s.y + 10,
+            'text-anchor': 'middle', fill: '#777',
+            'font-size': '8.5', 'font-family': 'Inter,sans-serif',
+          }, s.tools.split(',')[0].trim() + (s.tools.includes(',') ? '…' : '')));
+
+          sg.addEventListener('click', e => { e.stopPropagation(); showSub(s, b); });
+          subGroup.appendChild(sg);
+        });
+
+        nodeG.appendChild(subGroup);
+
+        /* Branch node (always visible, rendered on top of sub-groups) */
+        const bg = ns('g', { class: 'b-node', id: 'node-' + b.id });
+        bg.appendChild(ns('circle', {
+          cx: b.x, cy: b.y, r: 36,
+          fill: b.color + '22', stroke: b.color, 'stroke-width': '2',
+        }));
+        bg.appendChild(ns('text', {
+          x: b.x, y: b.y - 7, 'text-anchor': 'middle', fill: '#fff',
+          'font-size': '16', 'font-family': 'Inter,sans-serif',
+        }, b.icon));
+        bg.appendChild(ns('text', {
+          x: b.x, y: b.y + 13, 'text-anchor': 'middle', fill: '#e8e8e8',
+          'font-size': '9.5', 'font-weight': '700', 'font-family': 'Inter,sans-serif',
+        }, b.label));
+
+        bg.addEventListener('click', e => { e.stopPropagation(); showBranch(b); });
+        nodeG.appendChild(bg);
+      });
+    }
+
+    function select(elId) {
+      if (selectedEl) { const e = document.getElementById(selectedEl); if (e) e.classList.remove('selected'); }
+      selectedEl = elId;
+      const e = document.getElementById(elId); if (e) e.classList.add('selected');
+    }
+
+    function hideAllSubGroups() {
+      BRANCHES.forEach(b => {
+        const g = document.getElementById('sub-group-' + b.id);
+        if (g) { g.classList.remove('visible'); }
+      });
+    }
+
+    function showHome() {
+      select('node-center');
+      hideAllSubGroups();
+      activeSub = null;
+      setPanel({
+        icon: '🗺️', name: 'System Design', sub: 'All 11 domains',
+        color: '#2297F6',
+        bodyHtml: `
+          <p class="i-label">What this map covers</p>
+          <p class="i-text">A production system spans 11 interconnected domains. Each has its own tools and trade-offs — but they only make sense together. Click any branch to dive in.</p>
+          <p class="i-label">All domains</p>
+          <div class="sub-list">
+            ${BRANCHES.map(b => `
+              <div class="sub-item" style="--bc:${b.color}" onclick="window._showBranch('${b.id}')">
+                <div class="sub-name">${b.icon} ${b.label}</div>
+                <div class="sub-tools">${b.subnodes.map(s => s.name).join(' · ')}</div>
+              </div>`).join('')}
+          </div>`
+      });
+    }
+
+    function showBranch(b) {
+      select('node-' + b.id);
+      hideAllSubGroups();
+      const sg = document.getElementById('sub-group-' + b.id);
+      if (sg) sg.classList.add('visible');
+      activeSub = null;
+      setPanel({
+        icon: b.icon, name: b.label, sub: `${b.subnodes.length} concepts`,
+        color: b.color,
+        bodyHtml: `
+          <p class="i-label">Overview</p>
+          <p class="i-text">${b.description}</p>
+          <p class="i-label">Concepts in this domain</p>
+          <div class="sub-list">
+            ${b.subnodes.map(s => `
+              <div class="sub-item" style="--bc:${b.color}"
+                   onclick="window._showSub('${b.id}','${s.name.replace(/'/g,"\\'")}')">
+                <div class="sub-name">${s.name}</div>
+                <div class="sub-tools">${s.tools}</div>
+              </div>`).join('')}
+          </div>`
+      });
+    }
+
+    function showSub(s, b) {
+      const elId = 'sub-' + b.id + '-' + s.name.replace(/\W/g, '');
+      select(elId);
+      activeSub = { s, b };
+      setPanel({
+        icon: b.icon, name: s.name, sub: `Part of ${b.label}`,
+        color: b.color,
+        bodyHtml: `
+          <p class="i-label">Domain context</p>
+          <p class="i-text">${b.description}</p>
+          <p class="i-label">Tools &amp; Technologies</p>
+          <div class="tag-row">
+            ${s.tools.split(',').map(t => `<span class="tag" style="--bc:${b.color}">${t.trim()}</span>`).join('')}
+          </div>
+          <p class="i-label">All concepts in ${b.label}</p>
+          <div class="sub-list">
+            ${b.subnodes.map(c => `
+              <div class="sub-item ${c.name === s.name ? 'active' : ''}" style="--bc:${b.color}; ${c.name !== s.name ? 'cursor:pointer' : ''}"
+                   ${c.name !== s.name ? `onclick="window._showSub('${b.id}','${c.name.replace(/'/g,"\\'")}')"`:''}>
+                <div class="sub-name">${c.name === s.name ? '▶ ' : ''}${c.name}</div>
+                <div class="sub-tools">${c.tools}</div>
+              </div>`).join('')}
+          </div>`
+      });
+    }
+
+    function setPanel({ icon, name, sub, color, bodyHtml }) {
+      const panel = document.getElementById('info-panel');
+      panel.style.setProperty('--bc', color);
+      panel.innerHTML = `
+        <div class="info-header" style="border-bottom:1px solid #2a2d35">
+          <span class="info-icon">${icon}</span>
+          <div>
+            <div class="info-name">${name}</div>
+            <div class="info-sub">${sub}</div>
+          </div>
+        </div>
+        <div class="info-body">${bodyHtml}</div>
+      `;
+    }
+
+    /* Global helpers for inline onclick */
+    window._showBranch = id => { const b = BRANCHES.find(x => x.id === id); if (b) showBranch(b); };
+    window._showSub    = (bid, sname) => {
+      const b = BRANCHES.find(x => x.id === bid);
+      if (!b) return;
+      const s = b.subnodes.find(x => x.name === sname);
+      if (s) showSub(s, b);
+    };
+
+    /* ---- Pan & Zoom ---- */
+    (function () {
+      const wrap = document.getElementById('map-wrap');
+      const root = document.getElementById('root');
+      let tx = 0, ty = 0, sc = 1;
+      let dragging = false, ox, oy, otx, oty;
+
+      function apply() { root.setAttribute('transform', `translate(${tx},${ty}) scale(${sc})`); }
+
+      wrap.addEventListener('wheel', e => {
+        e.preventDefault();
+        sc = Math.min(2.5, Math.max(0.3, sc + (e.deltaY < 0 ? 0.08 : -0.08)));
+        apply();
+      }, { passive: false });
+
+      wrap.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        dragging = true; ox = e.clientX; oy = e.clientY; otx = tx; oty = ty;
+      });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        tx = otx + (e.clientX - ox); ty = oty + (e.clientY - oy); apply();
+      });
+      window.addEventListener('mouseup', () => { dragging = false; });
+    })();
+
+    renderMap();
+  </script>
+</body>
+</html>

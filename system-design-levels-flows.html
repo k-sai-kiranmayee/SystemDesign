@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Design — Levels, Flows &amp; OSI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #111317; --bg2: #1a1d23; --bg3: #22262f;
+      --border: #2a2d35; --border2: #363a44;
+      --text: #e8eaf0; --muted: #7a7f8e; --muted2: #555a66;
+      --blue: #2297F6; --cyan: #06B6D4; --cyan2: #22D3EE;
+      --purple: #A78BFA; --green: #34D399; --yellow: #FBBF24;
+      --orange: #FB923C; --red: #F87171;
+      --r: 10px; --rs: 6px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; }
+
+    /* HEADER */
+    .ph { background: linear-gradient(135deg,#151820,#111317); border-bottom: 1px solid var(--border); padding: 40px 32px 28px; text-align: center; }
+    .ph-badge { display:inline-block; background:rgba(34,151,246,.12); border:1px solid rgba(34,151,246,.3); color:var(--blue); font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; padding:4px 12px; border-radius:20px; margin-bottom:14px; }
+    .ph h1 { font-size:28px; font-weight:700; letter-spacing:-.5px; margin-bottom:8px; background:linear-gradient(135deg,#fff 30%,#7a7f8e); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .ph p { color:var(--muted); font-size:14px; }
+
+    /* MAIN TABS */
+    .main { max-width:1200px; margin:0 auto; padding:32px 20px 80px; }
+    .mtabs-list { display:flex; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; margin-bottom:28px; }
+    .mtabs-list::-webkit-scrollbar { display:none; }
+    .mtab { background:none; border:none; border-bottom:2px solid transparent; color:var(--muted); font-family:var(--font); font-size:13px; font-weight:500; padding:12px 18px; cursor:pointer; white-space:nowrap; transition:all .15s; margin-bottom:-1px; }
+    .mtab:hover { color:var(--text); }
+    .mtab.active { color:var(--blue); border-bottom-color:var(--blue); }
+    .mpanel { display:none; }
+    .mpanel.active { display:block; }
+
+    /* ARCH LEVELS */
+    .arch-wrap { display:grid; grid-template-columns:auto 1fr; gap:0; }
+    .arch-rail { width:40px; display:flex; flex-direction:column; align-items:center; padding-top:28px; }
+    .rail-line { width:2px; flex:1; background:linear-gradient(to bottom,var(--border2),var(--border2)) center/2px 100% no-repeat; position:relative; }
+    .rail-arrow { width:8px; height:8px; border-right:2px solid var(--border2); border-bottom:2px solid var(--border2); transform:rotate(45deg); margin-top:-4px; }
+    .arch-levels { display:flex; flex-direction:column; gap:6px; }
+    .level-card { border:1px solid var(--border); border-radius:var(--r); overflow:hidden; background:var(--bg2); transition:border-color .15s; }
+    .level-card:hover { border-color:var(--border2); }
+    .level-header { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; user-select:none; }
+    .level-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .level-info { flex:1; min-width:0; }
+    .level-name { font-size:14px; font-weight:600; }
+    .level-desc { font-size:12px; color:var(--muted); margin-top:2px; }
+    .level-toggle { color:var(--muted2); font-size:16px; transition:transform .2s; flex-shrink:0; }
+    .level-card.open .level-toggle { transform:rotate(90deg); }
+    .level-body { display:none; padding:0 16px 16px; border-top:1px solid var(--border); }
+    .level-card.open .level-body { display:block; }
+    .concepts-row { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0; }
+    .cpill { background:var(--bg3); border:1px solid var(--border2); color:var(--muted); font-size:12px; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; }
+    .cpill:hover, .cpill.active { background:rgba(34,151,246,.1); border-color:rgba(34,151,246,.4); color:var(--text); }
+    .concept-detail { margin-top:10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px; font-size:13px; color:var(--muted); line-height:1.7; display:none; }
+    .concept-detail.show { display:block; }
+    .concept-detail strong { color:var(--text); }
+    .tools-row { display:flex; flex-wrap:wrap; gap:5px; margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+    .tool-badge { background:var(--bg3); border:1px solid var(--border); color:var(--muted2); font-size:11px; padding:2px 8px; border-radius:4px; }
+    .flow-connector { text-align:center; font-size:11px; color:var(--muted2); padding:2px 0; }
+
+    /* OSI */
+    .osi-wrap { display:grid; grid-template-columns:1fr 200px; gap:16px; }
+    .osi-table { display:flex; flex-direction:column; gap:4px; }
+    .osi-row { display:grid; grid-template-columns:36px 130px 110px 1fr 1fr; gap:0; border:1px solid var(--border); border-radius:var(--rs); overflow:hidden; }
+    .osi-num { display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; font-family:var(--mono); padding:12px 4px; }
+    .osi-name { display:flex; flex-direction:column; justify-content:center; padding:10px 12px; font-weight:600; font-size:13px; border-right:1px solid var(--border); }
+    .osi-name small { font-size:10px; font-weight:500; color:var(--muted); margin-top:2px; }
+    .osi-pdu { display:flex; align-items:center; padding:10px 10px; font-size:11px; color:var(--muted); border-right:1px solid var(--border); font-family:var(--mono); }
+    .osi-protos { padding:10px 12px; font-size:11px; color:var(--muted); border-right:1px solid var(--border); line-height:1.6; }
+    .osi-example { padding:10px 12px; font-size:11px; color:var(--muted); line-height:1.6; }
+    .osi-hdr { display:grid; grid-template-columns:36px 130px 110px 1fr 1fr; gap:0; padding:6px 0; margin-bottom:4px; }
+    .osi-hdr span { font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; color:var(--muted2); padding:0 12px; }
+    .tcpip-map { display:flex; flex-direction:column; gap:4px; }
+    .tcpip-band { border:1px solid var(--border); border-radius:var(--rs); padding:10px 12px; background:var(--bg2); }
+    .tcpip-band-name { font-size:12px; font-weight:600; margin-bottom:4px; }
+    .tcpip-band p { font-size:11px; color:var(--muted); }
+    .osi-key { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+    .osi-key-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+    .osi-key-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+    /* FLOW STEPS (shared) */
+    .flow-steps { display:flex; flex-direction:column; gap:0; }
+    .flow-step-row { display:grid; grid-template-columns:60px 1fr; gap:0; }
+    .fsr-track { display:flex; flex-direction:column; align-items:center; }
+    .fsr-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; z-index:1; }
+    .fsr-line { width:2px; flex:1; min-height:16px; }
+    .fsr-body { padding:0 0 20px 0; }
+    .fsr-title { font-size:14px; font-weight:600; margin-bottom:4px; }
+    .fsr-detail { font-size:13px; color:var(--muted); line-height:1.7; }
+    .fsr-code { background:#0d0f12; border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px; font-family:var(--mono); font-size:11.5px; line-height:1.7; color:#c9d1e0; white-space:pre; overflow-x:auto; margin-top:8px; }
+
+    /* Sequence diagram (TCP, DNS, Auth) */
+    .seq-wrap { overflow-x:auto; }
+    .seq { display:grid; min-width:520px; }
+    .seq-actors { display:flex; margin-bottom:0; }
+    .seq-actor { flex:1; text-align:center; padding:10px 8px; background:var(--bg2); border:1px solid var(--border); font-size:12px; font-weight:600; }
+    .seq-actor:not(:last-child) { border-right:none; }
+    .seq-actor:first-child { border-radius:var(--rs) 0 0 0; }
+    .seq-actor:last-child { border-radius:0 var(--rs) 0 0; }
+    .seq-body { border:1px solid var(--border); border-top:none; border-radius:0 0 var(--rs) var(--rs); background:var(--bg2); padding:16px 0; }
+    .seq-msg { display:grid; align-items:center; padding:6px 0; position:relative; }
+    .seq-msg-label { font-size:11px; font-weight:600; background:var(--bg2); padding:2px 8px; border-radius:4px; position:absolute; z-index:2; white-space:nowrap; border:1px solid var(--border); }
+    .seq-line { height:1px; background:var(--border2); position:absolute; top:50%; z-index:1; }
+    .seq-arrow { position:absolute; top:50%; z-index:3; font-size:14px; }
+    .seq-note { font-size:11px; color:var(--muted); text-align:center; padding:6px 16px; font-style:italic; }
+    .seq-divider { border-top:1px dashed var(--border); margin:12px 16px; }
+
+    /* record table */
+    .rtable { width:100%; border-collapse:collapse; }
+    .rtable th { text-align:left; font-size:11px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; color:var(--muted2); padding:8px 12px; border-bottom:1px solid var(--border); }
+    .rtable td { padding:9px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+    .rtable tr:last-child td { border-bottom:none; }
+    .rtable tr:hover td { background:var(--bg3); }
+    .rtable code { font-family:var(--mono); font-size:11px; background:var(--bg3); border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--cyan2); }
+    .note { background:rgba(34,151,246,.07); border:1px solid rgba(34,151,246,.2); border-radius:var(--rs); padding:10px 14px; font-size:13px; color:var(--muted); margin-bottom:16px; }
+    .note strong { color:var(--blue); }
+    .sect { font-size:15px; font-weight:600; margin:0 0 14px; }
+    .mt { margin-top:24px; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    @media(max-width:720px) { .two-col { grid-template-columns:1fr; } .osi-wrap { grid-template-columns:1fr; } .osi-row { grid-template-columns:28px 100px 1fr; } .osi-pdu,.osi-example { display:none; } }
+
+    /* FLOW → LEVEL MAPPING */
+    .fmap { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:18px 20px; margin-bottom:24px; }
+    .fmap-title { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted2); margin-bottom:14px; }
+    .fmap-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .fmap-card { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--rs); padding:12px 14px; border-left:3px solid var(--c,var(--border2)); }
+    .fmap-tab { font-size:12px; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .fmap-level { font-size:11px; font-weight:700; color:var(--c,var(--muted)); margin-bottom:5px; }
+    .fmap-reason { font-size:11px; color:var(--muted); line-height:1.55; }
+  </style>
+</head>
+<body>
+
+<header class="ph">
+  <div class="ph-badge">System Design</div>
+  <h1>Architecture Levels, Flows &amp; OSI Model</h1>
+  <p>System design concepts at every layer — from physical bits to application code — with all major flows</p>
+</header>
+
+<div class="main">
+
+  <!-- FLOW → ARCHITECTURE LEVEL MAPPING -->
+  <div class="fmap">
+    <div class="fmap-title">Where each tab sits in the architecture</div>
+    <div class="fmap-grid">
+      <div class="fmap-card" style="--c:#2297F6">
+        <div class="fmap-tab">HTTP / API Flow</div>
+        <div class="fmap-level">All 10 Levels</div>
+        <div class="fmap-reason">The end-to-end request journey travels through every architecture level — Client → Edge → LB → Gateway → Backend → Cache → DB. HTTP is the thread that connects them all.</div>
+      </div>
+      <div class="fmap-card" style="--c:#555a66">
+        <div class="fmap-tab">OSI Model</div>
+        <div class="fmap-level">Cross-cutting — not a level</div>
+        <div class="fmap-reason">OSI is the underlying network protocol stack that every architecture level uses to move data. L1–L4 (bits→TCP) operate inside Levels 2–3; L5–L7 (session→HTTP) are used by Levels 1–5. OSI describes how data travels, not what your app does.</div>
+      </div>
+      <div class="fmap-card" style="--c:#34D399">
+        <div class="fmap-tab">TCP/IP Flow</div>
+        <div class="fmap-level">Level 2 (Network/Edge) + Level 3 (Traffic Management)</div>
+        <div class="fmap-reason">TCP connection setup and TLS termination happen at the CDN edge and load balancer — before your application code sees the request. Managed entirely by network infrastructure.</div>
+      </div>
+      <div class="fmap-card" style="--c:#06B6D4">
+        <div class="fmap-tab">DNS Resolution</div>
+        <div class="fmap-level">Level 2 (Network / Edge)</div>
+        <div class="fmap-reason">DNS is a network service that resolves domain names to IPs before any TCP connection starts. It runs at OSI L7 (DNS application protocol) over UDP/TCP, but is an infrastructure concern sitting in the Network/Edge layer.</div>
+      </div>
+      <div class="fmap-card" style="--c:#FBBF24">
+        <div class="fmap-tab">Auth Flow</div>
+        <div class="fmap-level">Level 4 (API Gateway / Security)</div>
+        <div class="fmap-reason">JWT validation and OAuth token exchange are enforced at the API Gateway — the boundary between infrastructure and your services. The client (L1) stores the token; the backend (L5) may check fine-grained permissions; but the primary enforcement point is L4.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mtabs-list" id="mtabsList"></div>
+  <div id="mpanels"></div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const ARCH_LEVELS = [
+  { num:1, id:'client', name:'Client / Presentation', color:'#A78BFA',
+    desc:'User-facing layer — browsers, mobile apps, desktop clients that initiate requests and render responses',
+    concepts:[
+      {n:'Single-Page App (SPA)',d:'JS app loads once; subsequent navigation handled client-side without full page reloads. Fast after first load. <strong>React, Vue, Angular.</strong>'},
+      {n:'Server-Side Rendering (SSR)',d:'HTML rendered on server per request and sent to browser. Better SEO and faster first paint. <strong>Next.js, Nuxt, Remix.</strong>'},
+      {n:'Progressive Web App (PWA)',d:'Web app with native features: offline via Service Worker, push notifications, installable icon. Cached with Cache Storage API.'},
+      {n:'Browser HTTP Cache',d:'<strong>Cache-Control</strong> (max-age, no-store), <strong>ETag</strong> (version hash), <strong>Last-Modified</strong> headers let browsers skip network round-trips for unchanged resources.'},
+      {n:'WebSocket',d:'Full-duplex persistent TCP connection. Server can push data at any time. Used for real-time chat, live dashboards, collaborative editing.'},
+      {n:'HTTP/2 & HTTP/3',d:'HTTP/2: multiplexed streams over one TCP connection, header compression (HPACK). HTTP/3: built on QUIC (UDP), eliminates head-of-line blocking, 0-RTT reconnect.'},
+    ],
+    tools:['React','Vue','Angular','Next.js','Nuxt','Vite','Service Worker API'] },
+
+  { num:2, id:'edge', name:'Network / Edge', color:'#06B6D4',
+    desc:'Global infrastructure — TLS termination, content caching close to users, DDoS protection, and DNS resolution',
+    concepts:[
+      {n:'DNS',d:'Translates domain names → IP addresses via hierarchical cache walk. TTL controls cache duration. Low TTL (30s) enables fast failover during incidents.'},
+      {n:'CDN (Content Delivery Network)',d:'Network of edge PoPs (Points of Presence) that cache static assets close to users. Reduces latency and offloads origin. Cache-Control headers control what is cached.'},
+      {n:'TLS/SSL',d:'Encrypts data in transit. TLS 1.3 requires only 1 RTT for handshake (vs 2 for 1.2). Terminated at edge or LB to offload crypto from app servers.'},
+      {n:'Anycast',d:'Same IP announced from multiple geographic locations; BGP routing sends users to nearest PoP. Used by Cloudflare, DNS resolvers (1.1.1.1).'},
+      {n:'DDoS Protection',d:'Volumetric attack absorption at edge: rate limiting by IP/ASN, traffic scrubbing (null routing bad IPs), challenge pages (CAPTCHA/JS challenge).'},
+      {n:'Edge Computing',d:'Run code at CDN edge without round-trip to origin. Cloudflare Workers, Lambda@Edge. Used for auth checks, A/B testing, geo-routing, header manipulation.'},
+    ],
+    tools:['Cloudflare','AWS CloudFront','Fastly','AWS Route 53','Akamai','Cloudflare Workers'] },
+
+  { num:3, id:'traffic', name:'Traffic Management', color:'#34D399',
+    desc:'Distributes load across servers, removes unhealthy instances, terminates SSL, and enables horizontal scaling',
+    concepts:[
+      {n:'Load Balancing',d:'Distributes requests across a pool of servers. <strong>Round Robin:</strong> even rotation. <strong>Least Connections:</strong> route to least-busy. <strong>IP Hash:</strong> same client → same server. <strong>Weighted:</strong> higher-capacity servers get more.'},
+      {n:'Health Checks',d:'LB polls each backend every 5–30s (HTTP GET /health). Unhealthy servers (3 consecutive failures) removed from rotation. Restored when healthy again.'},
+      {n:'SSL Termination',d:'Decrypt TLS once at the LB; send plain HTTP to backends. Saves CPU on app servers. Backend-to-LB traffic often on private network so plain HTTP is safe.'},
+      {n:'Circuit Breaker',d:'Tracks failure rate to a downstream service. After threshold (e.g., 50% errors in 10s), trips OPEN — requests fail-fast without hitting the failing service. Tries again after timeout (HALF-OPEN).'},
+      {n:'L4 vs L7 Load Balancing',d:'<strong>L4 (TCP/UDP):</strong> routes by IP+port only, very fast, no HTTP inspection. AWS NLB. <strong>L7 (HTTP):</strong> routes by URL path, headers, cookies. Can rewrite URLs, strip headers. AWS ALB, Nginx.'},
+      {n:'Sticky Sessions',d:'IP Hash or cookie-based affinity ensures a client always hits the same backend. Required for stateful apps that store session in memory (avoid this — use Redis for session instead).'},
+    ],
+    tools:['Nginx','HAProxy','AWS ALB','AWS NLB','Traefik','Envoy','F5'] },
+
+  { num:4, id:'gateway', name:'API Gateway / Security', color:'#FBBF24',
+    desc:'Centralized enforcement of auth, rate limiting, routing, and observability — the single entry point for all API calls',
+    concepts:[
+      {n:'API Gateway',d:'Single entry point for all API traffic. Handles cross-cutting concerns so individual services don\'t have to: auth, rate limiting, routing, response transformation, logging, CORS.'},
+      {n:'JWT (JSON Web Token)',d:'Header.Payload.Signature — three Base64URL parts. Stateless: gateway validates RS256 signature with public key, no DB lookup needed. Contains: user ID, roles, expiry (exp), issuer (iss).'},
+      {n:'OAuth 2.0',d:'Delegated authorization. <strong>Authorization Code + PKCE:</strong> for web/mobile (user grants access). <strong>Client Credentials:</strong> machine-to-machine. Access token (short-lived) + Refresh token (long-lived).'},
+      {n:'Rate Limiting',d:'<strong>Fixed Window:</strong> count per minute, simple but bursts at boundary. <strong>Sliding Window:</strong> smoothed. <strong>Token Bucket:</strong> allows controlled bursts. <strong>Leaky Bucket:</strong> constant output rate. Return 429 with Retry-After.'},
+      {n:'CORS (Cross-Origin Resource Sharing)',d:'Browser blocks cross-origin requests unless server explicitly allows via Access-Control-Allow-Origin. Preflight OPTIONS request checks permissions. Configured at gateway or app.'},
+      {n:'API Versioning',d:'<strong>URL path:</strong> /api/v1/users (most common, explicit). <strong>Header:</strong> API-Version: 2026-01-01. <strong>Query param:</strong> ?version=2. Never break existing clients — deprecate old versions with sunset headers.'},
+    ],
+    tools:['Kong','AWS API Gateway','Apigee','Auth0','Keycloak','Nginx','Envoy'] },
+
+  { num:5, id:'app', name:'Application / Services', color:'#FB923C',
+    desc:'Business logic layer — where your code lives, domain rules are enforced, and service-to-service communication happens',
+    concepts:[
+      {n:'Monolith vs Microservices',d:'<strong>Monolith:</strong> single deployable, simpler ops, harder to scale parts independently. Start here. <strong>Microservices:</strong> each service owns a domain + its own DB, deploys independently. More operational complexity.'},
+      {n:'REST',d:'Resource-oriented HTTP API. Stateless. Standard HTTP verbs (GET/POST/PUT/PATCH/DELETE). JSON body. Uniform interface. Most common choice for external APIs.'},
+      {n:'gRPC',d:'RPC over HTTP/2 with Protocol Buffers (binary, strongly typed, ~10x smaller than JSON). Auto-generates client/server code from .proto files. Ideal for internal service-to-service calls.'},
+      {n:'GraphQL',d:'Client specifies exactly what fields it needs. Single /graphql endpoint. Solves REST over-fetching (too much data) and under-fetching (multiple round-trips). Apollo, Hasura.'},
+      {n:'Service Mesh',d:'Sidecar proxy (Envoy) injected alongside each service handles: mTLS between services, retries, circuit breaking, load balancing, distributed tracing — without changing app code. Istio, Linkerd.'},
+      {n:'CQRS + Event Sourcing',d:'<strong>CQRS:</strong> separate read and write models — scale them independently. <strong>Event Sourcing:</strong> store state as a sequence of events (the audit log IS the source of truth). Replay events to rebuild state.'},
+      {n:'Saga Pattern',d:'Distributed transaction across multiple services via a sequence of local transactions. <strong>Choreography:</strong> services emit/react to events. <strong>Orchestration:</strong> central coordinator directs steps. Compensating transactions on failure.'},
+    ],
+    tools:['Node.js','Spring Boot','FastAPI','Go/Gin','NestJS','Kubernetes','Istio','Docker'] },
+
+  { num:6, id:'cache', name:'Caching Layer', color:'#22D3EE',
+    desc:'In-memory stores that serve reads in ~1ms — dramatically reducing database load and response latency',
+    concepts:[
+      {n:'Cache-Aside (Lazy Loading)',d:'App checks cache → on HIT return immediately (~1ms) → on MISS load from DB, write to cache, return. Cache failure degrades to slower DB reads, not errors. Most common pattern.'},
+      {n:'Write-Through',d:'Every write goes to cache AND DB synchronously. Cache is always fresh. Adds write latency. Good when reads >> writes.'},
+      {n:'Write-Behind (Write-Back)',d:'Write to cache only; async flush to DB later. Very high write throughput. Risk: data loss if cache crashes before flush. Suitable for analytics counters, not financial data.'},
+      {n:'TTL & Eviction',d:'TTL (Time-To-Live): keys auto-expire. Eviction when memory full: <strong>LRU</strong> (evict least recently used — best for most workloads), <strong>LFU</strong> (least frequently used), <strong>allkeys-lru</strong> in Redis.'},
+      {n:'Cache Stampede',d:'Many requests miss cache simultaneously (after expiry) → all hit DB at once → DB overload. Fixes: probabilistic early expiry, mutex/lock on miss (only one request refreshes), background refresh before TTL.'},
+      {n:'Cache Invalidation',d:'"There are only two hard things in CS: cache invalidation and naming things." On write: delete the key (next read repopulates) or write-through update. Event-driven: invalidate via message queue on data change.'},
+    ],
+    tools:['Redis','Memcached','AWS ElastiCache','DragonflyDB','Varnish','Hazelcast'] },
+
+  { num:7, id:'data', name:'Data Storage', color:'#2297F6',
+    desc:'Persistent, durable storage — relational and non-relational databases as the source of truth for application data',
+    concepts:[
+      {n:'SQL / Relational DB',d:'Structured data with ACID guarantees. Powerful JOINs, foreign keys, complex queries. Schema enforced. Best for financial data, inventory, user accounts. PostgreSQL, MySQL.'},
+      {n:'NoSQL',d:'<strong>Document</strong> (MongoDB): flexible JSON, nested data. <strong>Key-Value</strong> (DynamoDB, Redis): O(1) lookups. <strong>Wide-Column</strong> (Cassandra): massive scale, time-series. <strong>Graph</strong> (Neo4j): relationship queries.'},
+      {n:'ACID',d:'<strong>Atomicity:</strong> all-or-nothing transaction. <strong>Consistency:</strong> DB stays in valid state. <strong>Isolation:</strong> concurrent transactions don\'t see partial work. <strong>Durability:</strong> committed data survives crash (WAL log).'},
+      {n:'CAP Theorem',d:'Distributed DB can guarantee only 2 of 3: <strong>Consistency</strong> (every read gets latest write), <strong>Availability</strong> (every request gets a response), <strong>Partition Tolerance</strong> (works despite network splits). CP: ZooKeeper. AP: Cassandra. CA: single-node PostgreSQL.'},
+      {n:'Indexing',d:'<strong>B-Tree:</strong> ordered, O(log n), great for range queries and ORDER BY. <strong>Hash:</strong> O(1) exact match only. <strong>Composite index:</strong> (user_id, created_at DESC) for paginated user history. Index = faster reads, slower writes.'},
+      {n:'Sharding & Replication',d:'<strong>Sharding:</strong> horizontal split across DB servers by shard key (user_id % N). Eliminates cross-shard JOINs. <strong>Replication:</strong> primary handles writes, replicas handle reads. Eventual consistency with replication lag.'},
+    ],
+    tools:['PostgreSQL','MySQL','MongoDB','DynamoDB','Cassandra','CockroachDB','PgBouncer','Redis'] },
+
+  { num:8, id:'messaging', name:'Messaging / Async', color:'#A78BFA',
+    desc:'Asynchronous communication via queues and event streams — decouples producers from consumers for resilience and scale',
+    concepts:[
+      {n:'Message Queue',d:'Producer sends messages to a queue; consumer processes asynchronously. Point-to-point: one consumer per message. Buffers load spikes. If consumer is down, messages wait. AWS SQS, RabbitMQ.'},
+      {n:'Pub/Sub',d:'Publisher emits to a topic; multiple independent subscribers each receive a copy. Fan-out pattern. Publisher doesn\'t know or care who consumes. Google Pub/Sub, AWS SNS, Redis Pub/Sub.'},
+      {n:'Event Streaming (Kafka)',d:'Ordered, durable, partitioned log. Consumers read at their own pace from any offset — can replay history. Partitions enable parallelism. Consumers in a group: each partition assigned to one consumer.'},
+      {n:'At-Least-Once Delivery',d:'Most queues guarantee at-least-once (message delivered ≥ 1 time). Your consumer MUST be idempotent — processing the same message twice must produce the same result (use idempotency keys).'},
+      {n:'Dead Letter Queue (DLQ)',d:'Messages that fail processing N times (e.g., 3 retries) are moved to DLQ. Prevents one bad message blocking the queue forever. Monitor DLQ for bugs.'},
+      {n:'Backpressure',d:'When consumers are slower than producers, the system slows down producers instead of dropping messages or running out of memory. TCP has built-in backpressure; application-level queues need explicit handling.'},
+    ],
+    tools:['Apache Kafka','RabbitMQ','AWS SQS','AWS SNS','Redis Streams','Google Pub/Sub','NATS'] },
+
+  { num:9, id:'obs', name:'Observability', color:'#F87171',
+    desc:'The three pillars (metrics, logs, traces) that let you understand production system behavior and diagnose failures',
+    concepts:[
+      {n:'Metrics',d:'Numeric time-series: requests/sec, error rate, p99 latency, CPU%. Cheap to store, aggregated. The <strong>RED method</strong>: Rate, Errors, Duration per service. <strong>USE method</strong>: Utilization, Saturation, Errors per resource.'},
+      {n:'Logs',d:'Timestamped, structured event records. Rich detail per event. Expensive at scale — sample non-error logs. Structured (JSON) logs enable querying. ELK: Elasticsearch + Logstash + Kibana.'},
+      {n:'Distributed Tracing',d:'Traces a request across multiple services via a propagated Trace ID (in headers). Each service adds a Span. Visualizes the full call graph, latency breakdown, and where errors occur. Jaeger, Zipkin, Datadog APM.'},
+      {n:'SLI / SLO / SLA',d:'<strong>SLI:</strong> actual measured metric (e.g., % of requests <100ms). <strong>SLO:</strong> internal target (99.5% of requests <100ms). <strong>SLA:</strong> contractual commitment to customers with financial penalties. Error Budget = 100% - SLO.'},
+      {n:'Alerting',d:'Alert on symptoms (high error rate, latency > SLO) not causes (high CPU). Use PagerDuty routing to on-call. Multi-window alerting reduces false positives: short window catches spikes, long window catches slow degradation.'},
+    ],
+    tools:['Prometheus','Grafana','Jaeger','Zipkin','Datadog','OpenTelemetry','ELK Stack','Loki'] },
+
+  { num:10, id:'infra', name:'Infrastructure / DevOps', color:'#FBBF24',
+    desc:'Containers, orchestration, CI/CD pipelines, and IaC — the layer that builds, runs, and evolves the entire system',
+    concepts:[
+      {n:'IaC (Infrastructure as Code)',d:'Define infra (VMs, networks, DBs) in code files. Version-controlled, reviewable, reproducible. Terraform (cloud-agnostic HCL), Pulumi (real languages), AWS CDK.'},
+      {n:'Containers',d:'Package app + all dependencies into an immutable image. Runs identically on dev laptop and prod server. Docker image layers enable efficient storage and distribution.'},
+      {n:'Kubernetes (K8s)',d:'Container orchestrator: schedules pods across nodes, auto-restarts crashed containers, rolls out updates without downtime, scales based on CPU/custom metrics, manages service discovery + load balancing internally.'},
+      {n:'CI/CD',d:'<strong>CI:</strong> on every commit → build, lint, test, security scan. Fail fast. <strong>CD:</strong> auto-deploy to staging; manual or auto deploy to prod. GitHub Actions, GitLab CI, ArgoCD (GitOps for K8s).'},
+      {n:'Blue-Green Deployment',d:'Run old (blue) and new (green) versions simultaneously. Switch traffic via LB/DNS. Instant rollback: switch back to blue. Doubles infrastructure cost during transition.'},
+      {n:'Canary Release',d:'Route 5% of traffic to new version. Monitor error rate and latency. Gradually increase to 10% → 50% → 100%. Automatic rollback if metrics degrade. Reduces blast radius of bad deploys.'},
+    ],
+    tools:['Docker','Kubernetes','Terraform','GitHub Actions','ArgoCD','Helm','Pulumi','AWS ECS'] },
+];
+
+const OSI_LAYERS = [
+  { num:7, name:'Application',  short:'App',   color:'#A78BFA', pdu:'Data/Message',    tcpip:'Application',
+    protocols:'HTTP, HTTPS, DNS, FTP, SMTP, IMAP, SSH, WebSocket, SNMP, NFS',
+    example:'GET /api/v1/users HTTP/1.1 — the raw HTTP request your browser sends; DNS query for api.example.com' },
+  { num:6, name:'Presentation', short:'Pres',  color:'#06B6D4', pdu:'Data',             tcpip:'Application',
+    protocols:'TLS/SSL, JPEG, PNG, MPEG, ASCII/UTF-8, JSON/XML encoding, gzip, brotli',
+    example:'TLS encrypting the HTTP payload; gzip compressing the JSON response body before transmission' },
+  { num:5, name:'Session',      short:'Sess',  color:'#22D3EE', pdu:'Data',             tcpip:'Application',
+    protocols:'TLS sessions, NetBIOS, RPC, NFS sessions, SQL session state',
+    example:'TLS session resumption — browser reuses a previous session ticket to skip the full handshake (0-RTT)' },
+  { num:4, name:'Transport',    short:'Trans', color:'#34D399', pdu:'Segment / Datagram', tcpip:'Transport',
+    protocols:'TCP (reliable, ordered, connection-oriented), UDP (fast, connectionless), QUIC (HTTP/3), SCTP',
+    example:'TCP 3-way handshake (SYN→SYN-ACK→ACK) establishing connection before HTTP data flows. Port 443 for HTTPS.' },
+  { num:3, name:'Network',      short:'Net',   color:'#FBBF24', pdu:'Packet',           tcpip:'Internet',
+    protocols:'IPv4, IPv6, ICMP (ping), BGP (internet routing), OSPF, EIGRP, ARP, NAT',
+    example:'IP packet: src=192.168.1.5, dst=54.239.28.85, TTL=64. Each router hop decrements TTL; 0 = discarded.' },
+  { num:2, name:'Data Link',    short:'Link',  color:'#FB923C', pdu:'Frame',            tcpip:'Network Access',
+    protocols:'Ethernet (802.3), WiFi (802.11), PPP, ARP, VLANs (802.1Q), STP, MAC addressing',
+    example:'Ethernet frame: src MAC aa:bb:cc → dst MAC 00:1a:2b. Router rewrites MACs at each hop; IPs unchanged.' },
+  { num:1, name:'Physical',     short:'Phys',  color:'#F87171', pdu:'Bit',              tcpip:'Network Access',
+    protocols:'Cat6/Cat7 copper, Single-mode fiber, 802.11 (WiFi) radio, DSL, Bluetooth, USB',
+    example:'Cat6a cable transmitting 10 Gbps as electrical signals; fiber optic carrying 100 Gbps as light pulses.' },
+];
+
+// ── RENDER ARCHITECTURE LEVELS ────────────────────────────────────────────────
+function renderArch() {
+  let html = `<div class="arch-wrap">
+    <div class="arch-rail">
+      <div style="font-size:10px;color:var(--muted2);letter-spacing:.8px;text-transform:uppercase;transform:rotate(-90deg) translateX(-24px);white-space:nowrap;margin-bottom:8px;">Request ↓</div>
+      <div class="rail-line"></div>
+      <div class="rail-arrow"></div>
+    </div>
+    <div class="arch-levels">`;
+
+  ARCH_LEVELS.forEach((lv, i) => {
+    const bg = lv.color + '18';
+    const border = lv.color + '44';
+    html += `
+      <div class="level-card" id="lv-${lv.id}">
+        <div class="level-header" onclick="toggleLevel('${lv.id}')">
+          <div class="level-num" style="background:${bg};border:1px solid ${border};color:${lv.color}">${lv.num}</div>
+          <div class="level-info">
+            <div class="level-name">${lv.name}</div>
+            <div class="level-desc">${lv.desc}</div>
+          </div>
+          <div class="level-toggle" style="color:${lv.color}">›</div>
+        </div>
+        <div class="level-body">
+          <div class="concepts-row">
+            ${lv.concepts.map(c=>`<span class="cpill" onclick="toggleConcept('${lv.id}','${c.n.replace(/'/g,"\\'")}')" data-lvl="${lv.id}" data-key="${c.n.replace(/'/g,"&apos;")}">${c.n}</span>`).join('')}
+          </div>
+          <div class="concept-detail" id="cd-${lv.id}"></div>
+          <div class="tools-row">${lv.tools.map(t=>`<span class="tool-badge">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+      ${i < ARCH_LEVELS.length-1 ? `<div class="flow-connector" style="color:${lv.color}66">↓</div>` : ''}`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function toggleLevel(id) {
+  const el = document.getElementById('lv-'+id);
+  el.classList.toggle('open');
+}
+
+function toggleConcept(lvlId, key) {
+  const lv = ARCH_LEVELS.find(l => l.id === lvlId);
+  const c = lv.concepts.find(x => x.n === key);
+  const detail = document.getElementById('cd-'+lvlId);
+  const pills = document.querySelectorAll(`[data-lvl="${lvlId}"]`);
+  const pill = [...pills].find(p => p.dataset.key === key);
+  const isActive = pill.classList.contains('active');
+  pills.forEach(p => p.classList.remove('active'));
+  if (isActive) { detail.classList.remove('show'); detail.innerHTML=''; return; }
+  pill.classList.add('active');
+  detail.innerHTML = `<strong>${c.n}</strong><br>${c.d}`;
+  detail.classList.add('show');
+}
+
+// ── RENDER OSI ────────────────────────────────────────────────────────────────
+function renderOSI() {
+  const tcpipGroups = [
+    { name:'Application', color:'#A78BFA', layers:[7,6,5], desc:'HTTP, TLS, session management' },
+    { name:'Transport',   color:'#34D399', layers:[4],     desc:'TCP/UDP, ports, reliability' },
+    { name:'Internet',    color:'#FBBF24', layers:[3],     desc:'IP addressing and routing' },
+    { name:'Network Access', color:'#F87171', layers:[2,1], desc:'Ethernet, WiFi, physical media' },
+  ];
+  let hdr = `<div class="osi-hdr"><span></span><span>Layer</span><span>PDU</span><span>Protocols &amp; Tech</span><span>Real-World Example</span></div>`;
+  let rows = OSI_LAYERS.map(l => `
+    <div class="osi-row" style="background:${l.color}08;border-color:${l.color}30">
+      <div class="osi-num" style="background:${l.color}18;color:${l.color}">L${l.num}</div>
+      <div class="osi-name" style="border-color:${l.color}25"><span style="color:${l.color}">${l.name}</span><small>${l.short}</small></div>
+      <div class="osi-pdu" style="border-color:${l.color}25">${l.pdu}</div>
+      <div class="osi-protos" style="border-color:${l.color}25">${l.protocols}</div>
+      <div class="osi-example">${l.example}</div>
+    </div>`).join('');
+
+  let mapHtml = `<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted2);margin-bottom:10px;">TCP/IP Model</div>
+    <div class="tcpip-map">${tcpipGroups.map(g=>`
+      <div class="tcpip-band" style="border-color:${g.color}35;background:${g.color}08">
+        <div class="tcpip-band-name" style="color:${g.color}">${g.name}</div>
+        <p>OSI L${g.layers.join('+')} — ${g.desc}</p>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:16px;font-size:11px;color:var(--muted);line-height:1.7">
+      <strong style="color:var(--text)">Key difference:</strong> OSI is a conceptual 7-layer model (theoretical); TCP/IP is the practical 4-layer implementation that the internet actually runs on. Layers 5 &amp; 6 (Session &amp; Presentation) are usually handled by the same libraries as Layer 7 in practice (e.g., TLS lives "in" the Application layer in TCP/IP).
+    </div>`;
+
+  return `<div class="note"><strong>OSI Model</strong> (Open Systems Interconnection) — 7-layer conceptual framework for how data travels from one computer to another. Each layer only talks to the layer directly above and below it. Data is <strong>encapsulated</strong> going down (each layer adds a header) and <strong>decapsulated</strong> going up (each layer strips its header).</div>
+    <div class="osi-wrap">
+      <div><div class="osi-hdr"><span></span><span>Layer</span><span>PDU</span><span>Protocols &amp; Tech</span><span>Real-World Example</span></div><div class="osi-table">${rows}</div></div>
+      <div>${mapHtml}</div>
+    </div>`;
+}
+
+// ── HTTP FLOW ─────────────────────────────────────────────────────────────────
+function renderHTTP() {
+  const steps = [
+    { num:'01', color:'#A78BFA', title:'Browser — User Action',
+      detail:'User triggers request. Browser parses URL (protocol, host, path, query), checks HTTP cache (Cache-Control / ETag), initiates TCP + TLS if not cached. HTTP/2 multiplexes multiple requests over one connection.',
+      arch:'Client / Presentation (L10 in arch, L7 in OSI)',
+      code:`GET /api/v1/users/42 HTTP/2\nHost: api.example.com\nAuthorization: Bearer eyJ...\nAccept: application/json` },
+    { num:'02', color:'#06B6D4', title:'DNS Resolution',
+      detail:'Resolves api.example.com → IP. Checks: browser cache → OS cache → recursive resolver → root NS → .com TLD NS → authoritative NS. Returns A record + TTL.',
+      arch:'Network / Edge (OSI L7 application protocol over L3/L4)',
+      code:`api.example.com. 300 IN A 54.239.28.85\nTTL: 300s → cached 5 min` },
+    { num:'03', color:'#2297F6', title:'CDN / Edge',
+      detail:'TLS terminated at nearest PoP. Static assets served from edge cache (HIT). Dynamic /api/* forwarded to origin (MISS). Security headers added.',
+      arch:'Network / Edge (OSI L4–L7)',
+      code:`CF-Cache-Status: HIT   ← static asset\nCF-Cache-Status: DYNAMIC ← API call` },
+    { num:'04', color:'#34D399', title:'Load Balancer',
+      detail:'Routes request to healthy backend using least-connections algorithm. SSL terminated here (if not at CDN). Sets X-Real-IP, X-Forwarded-For headers.',
+      arch:'Traffic Management (OSI L4 or L7)',
+      code:`upstream backend { least_conn; server app1:3000; server app2:3000; }` },
+    { num:'05', color:'#FBBF24', title:'API Gateway',
+      detail:'Validates JWT signature + expiry + scopes. Applies rate limit (sliding window). Routes to correct microservice. Injects X-User-Id, X-Trace-Id headers.',
+      arch:'API Gateway / Security (OSI L7)',
+      code:`✓ JWT signature valid\n✓ scope: read:users\n✓ rate: 847/1000 remaining\n→ route to user-service:8001` },
+    { num:'06', color:'#FB923C', title:'Backend Service',
+      detail:'Route handler validates input (Zod/Joi). Applies business logic. Checks cache first (read-aside pattern). Falls back to DB on miss. Builds response.',
+      arch:'Application / Services (OSI L7)',
+      code:`const user = await redis.get(\`user:\${id}\`) // cache check\n  || await db.users.findById(id);        // DB fallback` },
+    { num:'07', color:'#22D3EE', title:'Cache Layer [Redis]',
+      detail:'Key: user:42. HIT → returns in ~1ms. MISS → falls through to DB. TTL: 300s. Invalidated on user update.',
+      arch:'Caching Layer', code:`CACHE HIT  → ~1ms\nCACHE MISS → ~50ms (DB query needed)` },
+    { num:'08', color:'#2297F6', title:'Database [PostgreSQL]',
+      detail:'Query via connection pool (PgBouncer). Query planner uses primary key B-tree index → O(log n). Returns row in ~0.03ms.',
+      arch:'Data Storage (OSI L7 — DB protocol like wire protocol)',
+      code:`SELECT id, name, email FROM users\nWHERE id = $1\n-- Index Scan on users_pkey: 0.032ms` },
+    { num:'09', color:'#34D399', title:'Response Path',
+      detail:'Service serializes JSON → gateway adds X-Request-Id, rate limit headers → LB forwards → CDN caches if public → browser parses JSON, updates DOM.',
+      arch:'All layers (response traverses in reverse)',
+      code:`HTTP/2 200 OK\nContent-Type: application/json\nX-Request-Id: gw-8f3a\nCache-Control: private, max-age=60` },
+  ];
+  return `<div class="note"><strong>HTTP / API Request Flow</strong> — A single GET request touches all architectural layers. The flow is sequential going down (request), reversed coming up (response). Total time: typically 50–200ms end-to-end.</div>
+    <div class="flow-steps">${steps.map((s,i)=>`
+      <div class="flow-step-row">
+        <div class="fsr-track">
+          <div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color}">${s.num}</div>
+          ${i<steps.length-1?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}
+        </div>
+        <div class="fsr-body">
+          <div class="fsr-title">${s.title}</div>
+          <div class="fsr-detail">${s.detail}<br><span style="font-size:11px;color:var(--muted2)">Layer: ${s.arch}</span></div>
+          <pre class="fsr-code">${s.code}</pre>
+        </div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── TCP/IP FLOW ───────────────────────────────────────────────────────────────
+function renderTCP() {
+  return `<div class="note"><strong>TCP/IP Connection Setup</strong> — Before any HTTP data flows, TCP must establish a reliable connection (3-way handshake), then TLS must negotiate encryption keys.</div>
+  <div class="two-col">
+    <div>
+      <div class="sect">TCP 3-Way Handshake</div>
+      <div class="flow-steps">
+        ${[
+          {color:'#34D399',title:'SYN — Client → Server',detail:'Client picks a random ISN (Initial Sequence Number, e.g. x=1000). Sends SYN packet: "I want to connect, my seq starts at 1000."',code:`TCP SYN\n  src_port: 52341  dst_port: 443\n  seq: 1000   ack: 0\n  flags: SYN`},
+          {color:'#34D399',title:'SYN-ACK — Server → Client',detail:'Server acknowledges client\'s seq (ack = x+1 = 1001), sends its own ISN (y=5000).',code:`TCP SYN-ACK\n  seq: 5000   ack: 1001\n  flags: SYN,ACK`},
+          {color:'#34D399',title:'ACK — Client → Server',detail:'Client confirms server\'s seq. Connection established. HTTP (or TLS) data can now flow.',code:`TCP ACK\n  seq: 1001   ack: 5001\n  flags: ACK\n→ Connection ESTABLISHED`},
+        ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color}">${i+1}</div>${i<2?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="sect">TLS 1.3 Handshake (1 RTT)</div>
+      <div class="flow-steps">
+        ${[
+          {color:'#FBBF24',title:'ClientHello',detail:'Client sends: TLS version, supported cipher suites, client random nonce, and key_share (Diffie-Hellman public key). Client can already compute pre-master secret.',code:`ClientHello\n  version: TLS 1.3\n  ciphers: TLS_AES_256_GCM_SHA384\n  key_share: DH public key\n  random: [32 bytes]`},
+          {color:'#FBBF24',title:'ServerHello + Certificate + Finished',detail:'Server selects cipher, sends its DH public key (both sides now compute shared secret), certificate (signed by CA), and Finished message — all encrypted. TLS is now active after just 1 RTT.',code:`ServerHello + {Certificate} + {Finished}\n  key_share: DH public key\n  certificate: CN=api.example.com\n  → shared secret computed\n  → ENCRYPTED from here`},
+          {color:'#FBBF24',title:'Client Finished + First HTTP Request',detail:'Client verifies cert chain against trusted CAs. Sends Finished. Can send first encrypted HTTP request in the same flight — 1 RTT total.',code:`{Client Finished}\n{GET /api/v1/users/42 HTTP/2}\n→ First request piggybacked!`},
+        ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color}">${i+1}</div>${i<2?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+      </div>
+      <div class="note mt" style="margin-top:16px"><strong>TLS 1.2 needed 2 RTTs.</strong> TLS 1.3 reduced this to 1 RTT. HTTP/3 with QUIC achieves 0-RTT reconnect for returning visitors by caching session parameters.</div>
+    </div>
+  </div>
+  <div class="mt">
+    <div class="sect">OSI Layer Mapping for a Single HTTP Request</div>
+    <table class="rtable" style="margin-top:8px">
+      <thead><tr><th>What travels</th><th>OSI Layer(s)</th><th>Added by</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP headers + JSON body</td><td>L7 Application</td><td>Your app code / browser</td></tr>
+        <tr><td>TLS encryption + session</td><td>L6 Presentation + L5 Session</td><td>TLS library (OpenSSL, BoringSSL)</td></tr>
+        <tr><td>TCP segment (port, seq, ack)</td><td>L4 Transport</td><td>OS kernel TCP stack</td></tr>
+        <tr><td>IP packet (src/dst IP, TTL)</td><td>L3 Network</td><td>OS kernel IP stack / router</td></tr>
+        <tr><td>Ethernet frame (src/dst MAC)</td><td>L2 Data Link</td><td>NIC driver / switch</td></tr>
+        <tr><td>Electrical/optical bits</td><td>L1 Physical</td><td>Cable / WiFi antenna</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── DNS FLOW ──────────────────────────────────────────────────────────────────
+function renderDNS() {
+  return `<div class="note"><strong>DNS Resolution</strong> — Translates api.example.com → 54.239.28.85 via a hierarchy of caches and authoritative servers. Each step is only reached if the previous cache is empty or expired.</div>
+  <div class="two-col">
+    <div>
+      <div class="sect">Recursive Resolution Steps</div>
+      <div class="flow-steps">
+        ${[
+          {color:'#06B6D4',title:'1. Browser Cache',detail:'Browser checks its own DNS cache. Browsers cache records for the duration of the TTL returned by DNS. Chrome: chrome://net-internals/#dns to inspect.',code:`Cache-Control: TTL 300s\n→ HIT: return IP immediately (0ms)\n→ MISS: continue to step 2`},
+          {color:'#06B6D4',title:'2. OS DNS Cache / /etc/hosts',detail:'OS checks its own resolver cache (nscd, systemd-resolved). Also checks /etc/hosts — can override any DNS entry locally.',code:`/etc/hosts:\n127.0.0.1  localhost\n# Override: 10.0.0.5 api.example.com`},
+          {color:'#06B6D4',title:'3. Recursive Resolver (ISP / 8.8.8.8)',detail:'Your router\'s configured DNS server (e.g., ISP, or manually set 8.8.8.8 / 1.1.1.1). This resolver does the hard work — walks the hierarchy on your behalf and caches results.',code:`Query: api.example.com A?\n→ Resolver checks its cache\n→ MISS: start recursive walk`},
+          {color:'#06B6D4',title:'4. Root Nameserver',detail:'13 root server clusters (a.root-servers.net through m.root-servers.net), anycast to 1000+ physical servers globally. Doesn\'t know api.example.com but knows who handles .com.',code:`Root → "I don't know, ask .com TLD NS:\n205.251.196.1"`},
+          {color:'#06B6D4',title:'5. TLD Nameserver (.com)',detail:'Verisign manages .com TLD. Knows all .com registrations. Doesn\'t know the IP but knows the authoritative NS for example.com.',code:`TLD → "Ask example.com\'s NS:\nns1.example.com = 198.51.100.1"`},
+          {color:'#06B6D4',title:'6. Authoritative Nameserver',detail:'The DNS server you configured at your registrar (AWS Route 53, Cloudflare DNS). Has the actual A record mapping.',code:`Authoritative → A record:\napi.example.com. 300 IN A 54.239.28.85\n→ Resolver caches for 300s\n→ Returns to browser`},
+        ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color};font-size:10px">${i+1}</div>${i<5?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="sect">DNS Record Types</div>
+      <table class="rtable">
+        <thead><tr><th>Type</th><th>Purpose</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>A</code></td><td>Domain → IPv4 address</td><td>api.example.com → 54.1.2.3</td></tr>
+          <tr><td><code>AAAA</code></td><td>Domain → IPv6 address</td><td>api.example.com → 2001:db8::1</td></tr>
+          <tr><td><code>CNAME</code></td><td>Domain → another domain (alias)</td><td>www → example.com</td></tr>
+          <tr><td><code>MX</code></td><td>Mail server for domain</td><td>example.com → mail.example.com</td></tr>
+          <tr><td><code>TXT</code></td><td>Arbitrary text (SPF, DKIM, verification)</td><td>v=spf1 include:_spf.google.com ~all</td></tr>
+          <tr><td><code>NS</code></td><td>Authoritative nameservers for domain</td><td>example.com NS ns1.example.com</td></tr>
+          <tr><td><code>SOA</code></td><td>Start of authority — zone metadata</td><td>Serial, refresh, retry, expire</td></tr>
+          <tr><td><code>PTR</code></td><td>IP → domain (reverse DNS)</td><td>85.28.239.54.in-addr.arpa → api.example.com</td></tr>
+          <tr><td><code>SRV</code></td><td>Service location (host + port)</td><td>_https._tcp.example.com → 443 host</td></tr>
+        </tbody>
+      </table>
+      <div class="note mt" style="margin-top:16px">
+        <strong>TTL strategy:</strong> Low TTL (30–60s) → fast failover, more DNS queries, higher cost. High TTL (3600–86400s) → fewer queries, slower propagation of IP changes. Reduce TTL before planned IP migrations.
+      </div>
+      <div style="margin-top:16px">
+        <div class="sect">Domain → Server → API (the full chain)</div>
+        <div class="flow-steps" style="margin-top:8px">
+          ${[
+            {color:'#A78BFA',title:'Buy domain at Registrar',detail:'Namecheap, GoDaddy, Cloudflare. Domain is registered in the .com TLD registry (Verisign). You own the right to configure NS records.',code:`example.com registered at Namecheap\nNS records → ns1.cloudflare.com`},
+            {color:'#FBBF24',title:'Spin up a Server (VM)',detail:'AWS EC2, DigitalOcean Droplet, GCP VM. Cloud provider assigns an IP from their IANA-allocated pool. Your app code runs here, listening on port 3000.',code:`EC2 t3.medium: IP = 54.239.28.85\nNode.js app listening on :3000`},
+            {color:'#34D399',title:'Set DNS A Record',detail:'In your DNS provider (Cloudflare, Route 53): create an A record pointing your domain to the server IP.',code:`api.example.com. A 54.239.28.85 TTL=300`},
+            {color:'#FB923C',title:'Server Always Running',detail:'Server must be up 24/7. Cloud providers: auto-restart on crash (systemd, PM2, K8s). Auto-scaling adds more servers under load. Serverless (Lambda) is an alternative — runs only when called, you don\'t manage the server.',code:`# Keep running: PM2\npm2 start server.js\npm2 startup  # restart on reboot`},
+          ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color};font-size:10px">${i+1}</div>${i<3?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── AUTH FLOW ─────────────────────────────────────────────────────────────────
+function renderAuth() {
+  return `<div class="note"><strong>Authentication Flows</strong> — JWT for stateless token validation; OAuth 2.0 for delegated authorization (third-party access). Both use the API Gateway as the enforcement point.</div>
+  <div class="two-col">
+    <div>
+      <div class="sect">JWT Structure &amp; Validation Flow</div>
+      <div class="flow-steps">
+        ${[
+          {color:'#A78BFA',title:'Token Structure',detail:'A JWT is three Base64URL-encoded parts separated by dots. The signature prevents tampering — if any part is modified, signature validation fails.',code:`Header.Payload.Signature\n\nHeader: { "alg": "RS256", "typ": "JWT" }\nPayload: {\n  "sub": "42",          // user ID\n  "iss": "https://auth.example.com",\n  "aud": "api.example.com",\n  "exp": 1779916800,    // expiry Unix ts\n  "scope": "read:users write:orders"\n}\nSignature: RSA-SHA256(base64(header)+"."+base64(payload), privateKey)`},
+          {color:'#A78BFA',title:'Login → Issue Token',detail:'User submits credentials to the auth service. Auth service validates, generates JWT signed with private key (RS256), returns access token (short-lived, 15min–1hr) and refresh token (long-lived, 7–30 days).',code:`POST /auth/login\n{ "email": "alice@example.com", "password": "..." }\n\n→ 200 OK\n{ "accessToken": "eyJ...",  // expires 1hr\n  "refreshToken": "dGhp..."  // expires 30d\n  "expiresIn": 3600 }`},
+          {color:'#A78BFA',title:'API Request with Token',detail:'Client stores access token (memory or httpOnly cookie — NOT localStorage for security). Attaches to every API request as Bearer token in Authorization header.',code:`GET /api/v1/users/42 HTTP/2\nAuthorization: Bearer eyJhbGci...\n\n// Gateway validates:\n✓ Decode header.payload (base64)\n✓ Verify signature with PUBLIC key\n✓ Check exp (not expired)\n✓ Check iss matches trusted issuer\n✓ Check scope covers this endpoint`},
+          {color:'#A78BFA',title:'Token Refresh',detail:'Access token expires → client uses refresh token to get a new access token without re-login. Refresh tokens are stored securely server-side; can be revoked (access tokens cannot, hence short lifespan).',code:`POST /auth/refresh\n{ "refreshToken": "dGhp..." }\n→ { "accessToken": "eyJnew..." }`},
+        ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color};font-size:10px">${i+1}</div>${i<3?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="sect">OAuth 2.0 — Authorization Code + PKCE</div>
+      <div class="flow-steps">
+        ${[
+          {color:'#06B6D4',title:'User clicks "Login with Google"',detail:'App generates a random code_verifier (43–128 chars), computes code_challenge = SHA256(code_verifier). Redirects user to Google\'s authorization endpoint. PKCE prevents authorization code interception attacks.',code:`// App generates PKCE pair\ncode_verifier = random(43 chars)\ncode_challenge = base64url(sha256(verifier))\n\n// Redirect to:\nhttps://accounts.google.com/o/oauth2/auth\n  ?client_id=YOUR_CLIENT_ID\n  &redirect_uri=https://app.com/callback\n  &response_type=code\n  &scope=openid email profile\n  &code_challenge=BASE64_HASH\n  &code_challenge_method=S256`},
+          {color:'#06B6D4',title:'User grants access at Google',detail:'Google shows consent screen. User approves. Google redirects back to redirect_uri with a short-lived authorization code (expires in ~10 minutes).',code:`GET https://app.com/callback\n  ?code=4/0AX4XfWh...\n  &state=random_csrf_token`},
+          {color:'#06B6D4',title:'Exchange code for tokens',detail:'App server (not browser) exchanges the auth code + original code_verifier for access and ID tokens. This server-side exchange keeps tokens out of browser history/logs.',code:`POST https://oauth2.googleapis.com/token\n{\n  "code": "4/0AX4XfWh...",\n  "code_verifier": "original_verifier",\n  "client_id": "...",\n  "redirect_uri": "https://app.com/callback",\n  "grant_type": "authorization_code"\n}\n→ { "access_token": "ya29...",\n    "id_token": "eyJ...",\n    "refresh_token": "1//0g..." }`},
+          {color:'#06B6D4',title:'Call APIs with access token',detail:'Access token used to call Google APIs (or your own API). ID token contains user info (email, name). Refresh token gets new access tokens when expired.',code:`GET https://www.googleapis.com/oauth2/v3/userinfo\nAuthorization: Bearer ya29...\n→ { "email": "alice@gmail.com", "name": "Alice" }`},
+        ].map((s,i)=>`<div class="flow-step-row"><div class="fsr-track"><div class="fsr-dot" style="background:${s.color}22;border:2px solid ${s.color};color:${s.color};font-size:10px">${i+1}</div>${i<3?`<div class="fsr-line" style="background:${s.color}33"></div>`:''}</div><div class="fsr-body"><div class="fsr-title">${s.title}</div><div class="fsr-detail">${s.detail}</div><pre class="fsr-code">${s.code}</pre></div></div>`).join('')}
+      </div>
+      <div class="note mt" style="margin-top:14px"><strong>JWT vs Session Cookie:</strong> JWT = stateless (no DB lookup to validate), hard to revoke before expiry. Session Cookie = stateful (server stores session), easy to revoke (delete from Redis), but requires DB/cache lookup per request.</div>
+    </div>
+  </div>`;
+}
+
+// ── TAB REGISTRY & INIT ───────────────────────────────────────────────────────
+const TABS = [
+  { id:'arch',  label:'Architecture Levels', render: renderArch },
+  { id:'http',  label:'HTTP / API Flow',     render: renderHTTP },
+  { id:'osi',   label:'OSI Model',           render: renderOSI  },
+  { id:'tcp',   label:'TCP/IP Flow',         render: renderTCP  },
+  { id:'dns',   label:'DNS Resolution',      render: renderDNS  },
+  { id:'auth',  label:'Auth Flow',           render: renderAuth },
+];
+
+function init() {
+  const list = document.getElementById('mtabsList');
+  const panels = document.getElementById('mpanels');
+  TABS.forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mtab' + (i===0?' active':'');
+    btn.textContent = t.label;
+    btn.onclick = () => {
+      document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.mpanel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('p-'+t.id).classList.add('active');
+    };
+    list.appendChild(btn);
+    const panel = document.createElement('div');
+    panel.className = 'mpanel' + (i===0?' active':'');
+    panel.id = 'p-'+t.id;
+    panel.innerHTML = t.render();
+    panels.appendChild(panel);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

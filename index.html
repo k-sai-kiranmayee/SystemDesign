@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Design — Learning Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+      background: #111317;
+      color: #e2e4e8;
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; }
+
+    /* Header */
+    .header { margin-bottom: 48px; }
+    .header-eyebrow {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: #2297F6; margin-bottom: 12px;
+    }
+    h1 { font-size: 32px; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 10px; }
+    .header-sub { font-size: 14px; color: #666; line-height: 1.7; max-width: 560px; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex; gap: 32px; margin-bottom: 40px;
+      padding: 16px 20px; background: #161820;
+      border: 1px solid #22252d; border-radius: 10px;
+    }
+    .stat { display: flex; flex-direction: column; gap: 3px; }
+    .stat-num { font-size: 22px; font-weight: 700; color: #fff; }
+    .stat-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* Card grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+    /* Card */
+    .card {
+      background: #161820;
+      border: 1px solid #22252d;
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.18s, background 0.18s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent, #2297F6);
+      opacity: 0.7;
+      transition: opacity 0.18s;
+    }
+    .card:hover {
+      border-color: var(--accent, #2297F6);
+      background: #1a1d26;
+      transform: translateY(-2px);
+    }
+    .card:hover::before { opacity: 1; }
+
+    .card-num {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--accent, #2297F6);
+    }
+    .card-title {
+      font-size: 15px; font-weight: 600; color: #f0f0f0; line-height: 1.4;
+    }
+    .card-desc {
+      font-size: 12px; color: #666; line-height: 1.7; flex: 1;
+    }
+    .card-tags {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .tag {
+      font-size: 10px; padding: 2px 8px; border-radius: 20px;
+      background: var(--accent, #2297F6)18;
+      border: 1px solid var(--accent, #2297F6)40;
+      color: var(--accent, #2297F6);
+    }
+    .card-arrow {
+      font-size: 13px; color: var(--accent, #2297F6);
+      align-self: flex-end; opacity: 0;
+      transition: opacity 0.18s;
+    }
+    .card:hover .card-arrow { opacity: 1; }
+
+    /* Footer */
+    .footer {
+      margin-top: 48px; padding-top: 20px;
+      border-top: 1px solid #1e2028;
+      font-size: 12px; color: #444; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="header">
+      <div class="header-eyebrow">System Design</div>
+      <h1>Learning Hub</h1>
+      <p class="header-sub">
+        Six visual references covering architecture patterns, request flows, OSI model,
+        microservices, and the full system design landscape. Click any card to open.
+      </p>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-num">6</span><span class="stat-label">Visual Guides</span></div>
+      <div class="stat"><span class="stat-num">10</span><span class="stat-label">Architecture Levels</span></div>
+      <div class="stat"><span class="stat-num">7</span><span class="stat-label">OSI Layers</span></div>
+      <div class="stat"><span class="stat-num">5+</span><span class="stat-label">Flow Diagrams</span></div>
+    </div>
+
+    <div class="grid">
+
+      <a class="card" href="system-design-request-flow.html" style="--accent:#2297F6">
+        <div class="card-num">01 — Request Flow</div>
+        <div class="card-title">End-to-End Request Flow</div>
+        <div class="card-desc">
+          Traces a single request from the user's browser all the way to the database and back.
+          Covers DNS lookup, TCP/TLS, API Gateway, backend, cache, and database — with an API
+          contract boundary marker.
+        </div>
+        <div class="card-tags">
+          <span class="tag">HTTP</span>
+          <span class="tag">DNS</span>
+          <span class="tag">TLS</span>
+          <span class="tag">API</span>
+          <span class="tag">Cache</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+      <a class="card" href="system-design-web-app.html" style="--accent:#A78BFA">
+        <div class="card-num">02 — Web App Architecture</div>
+        <div class="card-title">General Web Application Architecture</div>
+        <div class="card-desc">
+          Top-down layer diagram showing Client → CDN → Load Balancer → API Gateway →
+          App Layer → Cache → Database → Storage → Monitoring. Includes real tool
+          examples per layer with hover tooltips.
+        </div>
+        <div class="card-tags">
+          <span class="tag">Nginx</span>
+          <span class="tag">Redis</span>
+          <span class="tag">PostgreSQL</span>
+          <span class="tag">S3</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+      <a class="card" href="system-design-microservices-flow.html" style="--accent:#34D399">
+        <div class="card-num">03 — Microservices</div>
+        <div class="card-title">Distributed / Microservices Architecture</div>
+        <div class="card-desc">
+          Interactive SVG diagram with clickable nodes. Shows API Gateway, Auth, User,
+          Order, Payment, and Notification services, each with its own database, plus
+          Kafka message broker and Service Registry.
+        </div>
+        <div class="card-tags">
+          <span class="tag">Kafka</span>
+          <span class="tag">Consul</span>
+          <span class="tag">Kong</span>
+          <span class="tag">JWT</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+      <a class="card" href="system-design-levels-flows.html" style="--accent:#FBBF24">
+        <div class="card-num">04 — Levels &amp; Flows</div>
+        <div class="card-title">Architecture Levels, Flows &amp; OSI Model</div>
+        <div class="card-desc">
+          Six tabs covering 10 architecture levels with expandable concepts, plus step-by-step
+          flows for HTTP/API, TCP/IP (3-way handshake), DNS resolution, Authentication (JWT/OAuth),
+          and a full OSI layer reference.
+        </div>
+        <div class="card-tags">
+          <span class="tag">OSI</span>
+          <span class="tag">TCP/IP</span>
+          <span class="tag">OAuth 2.0</span>
+          <span class="tag">DNS</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+      <a class="card" href="system-design-concepts.html" style="--accent:#F87171">
+        <div class="card-num">05 — Core Concepts</div>
+        <div class="card-title">System Design Concepts</div>
+        <div class="card-desc">
+          A reference card collection of fundamental system design concepts — scalability,
+          availability, consistency, partitioning, caching strategies, CAP theorem, and more,
+          each with a concise explanation and tool examples.
+        </div>
+        <div class="card-tags">
+          <span class="tag">CAP</span>
+          <span class="tag">ACID</span>
+          <span class="tag">Sharding</span>
+          <span class="tag">CDN</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+      <a class="card" href="system-design-full-picture.html" style="--accent:#22D3EE">
+        <div class="card-num">06 — Full Picture</div>
+        <div class="card-title">Complete System Design Mind Map</div>
+        <div class="card-desc">
+          Mind-map view branching from "System Design" into Frontend, Networking, Backend,
+          Data Storage, Caching, Messaging, Security, Scalability, Reliability, Observability,
+          and Infrastructure/DevOps — with sub-nodes for every concept and tool.
+        </div>
+        <div class="card-tags">
+          <span class="tag">Big Picture</span>
+          <span class="tag">All Topics</span>
+          <span class="tag">Mind Map</span>
+        </div>
+        <div class="card-arrow">→ Open</div>
+      </a>
+
+    </div>
+
+    <div class="footer">
+      System Design Visual References &nbsp;·&nbsp; Open any file directly in a browser — no server needed
+    </div>
+  </div>
+</body>
+</html>

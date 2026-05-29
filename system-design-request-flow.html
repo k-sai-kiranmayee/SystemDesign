@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>End-to-End Request Flow — System Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111317;
+      --bg2: #1a1d23;
+      --bg3: #22262f;
+      --border: #2a2d35;
+      --border2: #363a44;
+      --text: #e8eaf0;
+      --muted: #7a7f8e;
+      --muted2: #555a66;
+      --blue: #2297F6;
+      --cyan: #06B6D4;
+      --cyan2: #22D3EE;
+      --purple: #A78BFA;
+      --green: #34D399;
+      --yellow: #FBBF24;
+      --orange: #FB923C;
+      --red: #F87171;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ─── PAGE HEADER ─────────────────────────────────── */
+    .page-header {
+      background: linear-gradient(135deg, #151820 0%, #111317 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 32px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: -80px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse, rgba(34,151,246,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hd-badge {
+      display: inline-block;
+      background: rgba(34,151,246,0.12);
+      border: 1px solid rgba(34,151,246,0.3);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #fff 30%, #7a7f8e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 560px;
+      margin: 0 auto 20px;
+    }
+    .hd-pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .hd-pills span {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ─── LAYOUT ──────────────────────────────────────── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+    .section { margin-bottom: 56px; }
+    .section-head { margin-bottom: 28px; }
+    .section-head h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    .section-head p { color: var(--muted); font-size: 13px; }
+
+    /* ─── FLOW DIAGRAM ────────────────────────────────── */
+    .flow-layers { display: flex; flex-direction: column; gap: 0; }
+
+    .flow-layer {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    .layer-label {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted2);
+      padding: 12px 8px;
+      min-width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+      background: var(--bg2);
+      border-radius: var(--radius) 0 0 var(--radius);
+    }
+
+    .layer-steps {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 16px 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: none;
+    }
+    .flow-layer:first-child .layer-label,
+    .flow-layer:first-child .layer-steps { border-radius: var(--radius) var(--radius) 0 0; }
+    .flow-layer:first-child .layer-label { border-radius: var(--radius) 0 0 0; }
+    .flow-layer:first-child .layer-steps { border-radius: 0 var(--radius) 0 0; }
+    .flow-layer:last-child .layer-label { border-radius: 0 0 0 var(--radius); }
+    .flow-layer:last-child .layer-steps { border-radius: 0 0 var(--radius) 0; }
+
+    /* separators between layers */
+    .flow-layer + .flow-layer .layer-label,
+    .flow-layer + .flow-layer .layer-steps { border-top: none; }
+
+    .flow-step {
+      flex: 1;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.18s ease;
+      min-width: 0;
+    }
+    .flow-step:hover { border-color: var(--step-color, var(--blue)); transform: translateY(-2px); }
+    .flow-step.active {
+      border-color: var(--step-color, var(--blue));
+      background: color-mix(in srgb, var(--step-color, var(--blue)) 8%, var(--bg3));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--step-color, var(--blue)) 40%, transparent);
+    }
+
+    .step-num {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--step-color, var(--blue));
+      margin-bottom: 6px;
+      font-family: var(--mono);
+    }
+    .step-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .step-sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .step-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--step-color, var(--blue));
+      position: absolute;
+      top: 10px; right: 10px;
+      opacity: 0.6;
+    }
+    .flow-step.active .step-dot { opacity: 1; box-shadow: 0 0 6px var(--step-color, var(--blue)); }
+
+    /* API contract boundary — steps 05–08 */
+    .flow-step.api-core {
+      border-top: 2px solid rgba(52,211,153,0.4);
+    }
+    .step-api-badge {
+      display: none;
+      position: absolute;
+      top: -1px; left: 50%; transform: translateX(-50%);
+      background: rgba(52,211,153,0.12);
+      border: 1px solid rgba(52,211,153,0.35);
+      border-top: none;
+      color: #34D399;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 1px 7px;
+      border-radius: 0 0 5px 5px;
+      white-space: nowrap;
+    }
+    .flow-step.api-core .step-api-badge { display: block; }
+
+    /* annotation bar between network and entry rows */
+    .api-boundary-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px 10px 48px;
+      background: rgba(52,211,153,0.04);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .api-boundary-line { flex: 1; height: 1px; background: rgba(52,211,153,0.25); }
+    .api-boundary-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #34D399;
+      padding: 3px 10px;
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    /* callout box */
+    .api-callout {
+      margin-top: 16px;
+      border: 1px solid rgba(52,211,153,0.2);
+      background: rgba(52,211,153,0.04);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    .api-callout-icon {
+      font-size: 20px;
+      line-height: 1;
+      padding-top: 2px;
+    }
+    .api-callout-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .api-callout-body strong { color: #34D399; }
+    .api-callout-body code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--cyan2);
+    }
+
+    .flow-arrow {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      color: var(--muted2);
+      font-size: 16px;
+      user-select: none;
+    }
+    .flow-arrow svg { width: 20px; height: 20px; }
+
+    /* layer connector arrow (between rows) */
+    .layer-connector {
+      display: flex;
+      align-items: center;
+      height: 28px;
+      padding-left: 36px;
+      color: var(--muted2);
+      font-size: 18px;
+    }
+    .layer-connector.right { justify-content: flex-end; padding-right: 24px; padding-left: 0; }
+
+    /* ─── DETAIL PANEL ────────────────────────────────── */
+    .flow-detail {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg2);
+      min-height: 200px;
+      overflow: hidden;
+    }
+    .detail-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      color: var(--muted2);
+      gap: 8px;
+    }
+    .detail-empty-arrow { font-size: 28px; opacity: 0.4; }
+
+    .detail-inner { display: none; }
+    .detail-inner.visible { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+
+    .detail-left {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+    }
+    .detail-right { padding: 24px; background: var(--bg); }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .detail-num {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--detail-color, var(--blue));
+      background: color-mix(in srgb, var(--detail-color, var(--blue)) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--detail-color, var(--blue)) 30%, transparent);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .detail-title { font-size: 16px; font-weight: 600; }
+
+    .detail-what { color: var(--muted); font-size: 13px; margin-bottom: 16px; line-height: 1.7; }
+
+    .detail-how-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted2);
+      margin-bottom: 10px;
+    }
+    .detail-how { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .detail-how li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .detail-how li::before {
+      content: '›';
+      color: var(--detail-color, var(--blue));
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 0px;
+    }
+
+    .detail-tools {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .detail-tool {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .detail-code-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted2);
+      margin-bottom: 10px;
+    }
+    .code-block {
+      background: #0d0f12;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: #c9d1e0;
+      white-space: pre;
+      overflow-x: auto;
+      tab-size: 2;
+    }
+
+    /* ─── API TABS ────────────────────────────────────── */
+    .api-tabs {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .api-tabs-list {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .api-tabs-list::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 14px 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    .api-tab-panel { display: none; padding: 28px; }
+    .api-tab-panel.active { display: block; }
+
+    /* Tab content styles */
+    .api-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .api-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted2);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .api-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .api-table tr:last-child td { border-bottom: none; }
+    .api-table tr:hover td { background: var(--bg3); }
+    .api-table code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--cyan2);
+    }
+
+    .method-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      min-width: 56px;
+      text-align: center;
+    }
+    .method-get { background: rgba(52,211,153,0.15); color: #34D399; }
+    .method-post { background: rgba(34,151,246,0.15); color: #2297F6; }
+    .method-put { background: rgba(251,191,36,0.15); color: #FBBF24; }
+    .method-patch { background: rgba(167,139,250,0.15); color: #A78BFA; }
+    .method-delete { background: rgba(248,113,113,0.15); color: #F87171; }
+
+    .status-group { margin-bottom: 20px; }
+    .status-group-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px;
+    }
+    .status-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg3);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .status-code {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      min-width: 36px;
+    }
+    .status-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .s2 { color: var(--green); }
+    .s3 { color: var(--cyan); }
+    .s4 { color: var(--yellow); }
+    .s5 { color: var(--red); }
+
+    .api-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .panel-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .panel-card-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted2);
+      margin-bottom: 12px;
+    }
+
+    .note-box {
+      background: rgba(34,151,246,0.07);
+      border: 1px solid rgba(34,151,246,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .note-box strong { color: var(--blue); }
+
+    .tip-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .tip-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .tip-list li .tip-icon {
+      color: var(--green);
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .tip-list li .warn-icon { color: var(--yellow); }
+
+    .sub-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      margin-top: 20px;
+      color: var(--text);
+    }
+
+    @media (max-width: 768px) {
+      .detail-inner.visible { grid-template-columns: 1fr; }
+      .detail-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .api-two-col { grid-template-columns: 1fr; }
+      .layer-label { display: none; }
+      .flow-layer .layer-steps { border-left: 1px solid var(--border); border-radius: var(--radius); }
+      .page-header h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="hd-badge">System Design</div>
+  <h1>End-to-End Request Flow</h1>
+  <p>How a request travels from browser to database and back — API design, lifecycle, and best practices</p>
+  <div class="hd-pills">
+    <span>HTTP Lifecycle</span>
+    <span>REST API Design</span>
+    <span>Auth &amp; Rate Limiting</span>
+    <span>Caching</span>
+    <span>Frontend Usage</span>
+    <span>Error Handling</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- SECTION 1: FLOW DIAGRAM -->
+  <section class="section">
+    <div class="section-head">
+      <h2>Request Journey</h2>
+      <p>Click any step to explore what happens at that layer — from user action to database and back</p>
+    </div>
+
+    <div class="flow-layers" id="flowLayers"></div>
+
+    <div class="api-callout">
+      <div class="api-callout-icon">⬡</div>
+      <div class="api-callout-body">
+        <strong>Where does the API actually live?</strong> The API contract — the URL structure, HTTP methods, and request/response shapes — is <strong>defined and implemented in the Backend Server (step 06)</strong>. Steps 05–08 form the API boundary (marked green above): the Gateway enforces access policies on it, the Cache accelerates its responses, and the Database persists its data. Steps 01–04 are pure infrastructure routing traffic <em>toward</em> your API — they don't know or care what endpoints exist.<br><br>
+        <strong>Server vs Domain:</strong> The <strong>server</strong> (an EC2 instance, a Droplet, a container) is a machine that runs 24/7 with your code listening on a port. It gets an IP address (e.g., <code>54.239.28.85</code>) assigned by the cloud provider. The <strong>domain</strong> (<code>api.example.com</code>) is bought separately from a registrar (Namecheap, Cloudflare) and linked to the server via a DNS A record. IANA → Regional Registries (ARIN, RIPE) → Cloud providers manage IP space; ICANN → Registrars manage domain names.
+      </div>
+    </div>
+
+    <div class="flow-detail" id="flowDetail">
+      <div class="detail-empty">
+        <div class="detail-empty-arrow">↑</div>
+        <p>Select a step above to see what happens at that layer</p>
+      </div>
+      <div class="detail-inner" id="detailInner"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: API DESIGN REFERENCE -->
+  <section class="section">
+    <div class="section-head">
+      <h2>API Design Reference</h2>
+      <p>REST conventions, request &amp; response anatomy, status codes, and frontend usage patterns</p>
+    </div>
+
+    <div class="api-tabs">
+      <div class="api-tabs-list" id="apiTabsList"></div>
+      <div id="apiTabsContent"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ─── STEP DATA ──────────────────────────────────────────────────────────────
+const STEPS = [
+  {
+    id: 'user', num: '01', name: 'User Action', sub: 'Browser',
+    color: '#A78BFA',
+    what: 'The user triggers an action in the browser — typing a URL, clicking a button, or submitting a form. The browser parses the URL, checks its local cache, and prepares an HTTP request.',
+    how: [
+      'URL parsed into parts: protocol (https), host (api.example.com), path (/users/42), query (?fields=name)',
+      'Browser checks cache: looks for a matching ETag, Last-Modified, or non-expired Cache-Control max-age',
+      'If cached and fresh → returns cached response immediately (no network request)',
+      'If not cached: initiates TCP connection → TLS 1.3 handshake → HTTP/2 stream',
+      'HTTP request assembled: method, path, headers (Accept, Authorization, Content-Type)',
+      'For POST/PUT/PATCH: request body serialized to JSON and included'
+    ],
+    tools: ['Chrome DevTools (Network tab)', 'Firefox DevTools', 'fetch API', 'Axios', 'XMLHttpRequest'],
+    example: `GET /api/v1/users/42 HTTP/2
+Host: api.example.com
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
+Accept: application/json
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+X-Request-Id: client-abc-123`
+  },
+  {
+    id: 'dns', num: '02', name: 'DNS Resolution', sub: 'Domain → IP',
+    color: '#06B6D4',
+    what: 'Before sending any data, the browser must resolve the domain name (api.example.com) to an IP address. DNS resolution walks a hierarchy of caches and authoritative servers.',
+    how: [
+      'Check local /etc/hosts file (instant, milliseconds)',
+      'Check browser DNS cache (TTL-based, typically seconds to minutes)',
+      'Check OS DNS cache',
+      'Query recursive resolver (configured ISP resolver or 8.8.8.8 / 1.1.1.1)',
+      'Recursive resolver walks: root NS → .com TLD NS → example.com authoritative NS',
+      'Returns A record (IPv4) or AAAA record (IPv6) with a TTL — cached for that duration'
+    ],
+    tools: ['AWS Route 53', 'Cloudflare DNS (1.1.1.1)', 'Google DNS (8.8.8.8)', 'dig', 'nslookup'],
+    example: `$ dig api.example.com
+
+;; ANSWER SECTION:
+api.example.com.  300  IN  A  54.239.28.85
+api.example.com.  300  IN  A  54.239.28.86
+
+;; TTL: 300 seconds → cached for 5 minutes
+;; Multiple IPs → round-robin DNS for basic load distribution
+;; Low TTL (30-60s) allows faster failover during incidents`
+  },
+  {
+    id: 'cdn', num: '03', name: 'CDN / Edge', sub: 'TLS Termination &amp; Cache',
+    color: '#2297F6',
+    what: 'The request hits the nearest CDN Point of Presence (PoP). TLS is terminated at the edge for speed. Static assets are served from the edge cache. Dynamic API requests are forwarded to the origin.',
+    how: [
+      'TLS 1.3 handshake completed at the edge PoP — closer = faster (reduces RTT)',
+      'Static assets (JS, CSS, images, fonts): CDN checks edge cache → HIT returns immediately',
+      'Cache MISS for static: forward to origin, cache per Cache-Control response headers',
+      'Dynamic /api/* requests: forwarded to origin — CDN acts as a transparent proxy',
+      'CDN can add/modify security headers: HSTS, X-Frame-Options, CSP',
+      'Some CDNs run edge compute (Cloudflare Workers) for auth, A/B testing at edge'
+    ],
+    tools: ['Cloudflare', 'AWS CloudFront', 'Fastly', 'Akamai', 'Azure CDN'],
+    example: `# Static asset: cache HIT
+HTTP/2 200 OK
+CF-Cache-Status: HIT
+Age: 3600
+Cache-Control: public, max-age=86400
+
+# API request forwarded to origin
+GET /api/v1/users/42
+CF-Cache-Status: DYNAMIC  ← not cached, passed through
+
+# Response headers added by CDN:
+Strict-Transport-Security: max-age=31536000
+X-Frame-Options: DENY`
+  },
+  {
+    id: 'lb', num: '04', name: 'Load Balancer', sub: 'Traffic Distribution',
+    color: '#34D399',
+    what: 'Distributes incoming requests across a pool of backend servers. Automatically removes unhealthy instances and enables horizontal scaling by simply adding more servers.',
+    how: [
+      'Health checks poll each server every 5-30s; unhealthy servers removed from rotation',
+      'Round Robin: requests distributed evenly across all servers (default)',
+      'Least Connections: route to server with fewest active connections (better for variable request times)',
+      'IP Hash: same client always hits same server (sticky sessions for stateful apps)',
+      'SSL/TLS termination: decrypt once at LB → plain HTTP to backends (saves CPU)',
+      'L4 LB (TCP): fast, low overhead — forwards packets. L7 LB (HTTP): can route by URL path/headers'
+    ],
+    tools: ['Nginx', 'HAProxy', 'AWS ALB (L7)', 'AWS NLB (L4)', 'Traefik', 'Envoy'],
+    example: `# Nginx upstream with least_conn
+upstream api_pool {
+  least_conn;
+  server app1.internal:3000 weight=3;
+  server app2.internal:3000 weight=3;
+  server app3.internal:3000 weight=1;
+  keepalive 32;         # connection reuse
+}
+
+server {
+  listen 443 ssl;
+  location /api/ {
+    proxy_pass http://api_pool;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}`
+  },
+  {
+    id: 'gateway', num: '05', name: 'API Gateway', sub: 'Auth · Rate Limit · Route',
+    color: '#FBBF24', apiCore: true,
+    what: 'The single entry point for all API calls. Handles cross-cutting concerns — authentication, rate limiting, routing — so individual services don\'t have to.',
+    how: [
+      'Authentication: validate JWT signature (RS256/HS256), check expiry and issuer',
+      'Authorization: verify that the token\'s scopes permit the requested operation',
+      'Rate limiting: sliding window counter per user/IP; return 429 when limit exceeded',
+      'Request routing: /api/v1/users/* → user-service:8001, /api/v1/orders/* → order-service:8002',
+      'Inject metadata headers: X-User-Id, X-User-Role, X-Trace-Id, X-Request-Id',
+      'Observability: log every request, emit metrics, inject trace headers for distributed tracing'
+    ],
+    tools: ['Kong', 'AWS API Gateway', 'Apigee', 'Nginx + Lua', 'Traefik', 'Envoy'],
+    example: `// Incoming request
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJ1c2VySWQiOjQy...
+
+// Gateway validates:
+✓ Signature valid (RS256, verified with public key)
+✓ exp: 1779916800 — not expired
+✓ iss: "https://auth.example.com"
+✓ scope includes "read:users"
+✓ Rate limit: 847/1000 requests remaining
+
+// Forwarded to user-service with enriched headers:
+GET /users/42 HTTP/1.1
+X-User-Id: 42
+X-User-Role: admin
+X-Trace-Id: 7f3a-b291-4c77-9e2d
+X-Request-Id: gw-8f3a-b291`
+  },
+  {
+    id: 'backend', num: '06', name: 'Backend Service', sub: 'Business Logic',
+    color: '#FB923C', apiCore: true,
+    what: 'The application code that processes the request, validates input, applies business rules, and orchestrates data access (cache + database).',
+    how: [
+      'Route handler matches HTTP method + path, extracts path params, query string, body',
+      'Middleware chain runs in order: body parser → input validation → auth check → handler',
+      'Input validation: check types, required fields, value constraints (Joi, Zod, class-validator)',
+      'Business logic: ownership checks, pricing calculations, state machine transitions',
+      'Data access: check cache first (read-aside) → DB fallback → populate cache on miss',
+      'Build response object, set HTTP status code, return serialized JSON'
+    ],
+    tools: ['Node.js/Express', 'Spring Boot (Java)', 'FastAPI (Python)', 'Go/Gin', 'NestJS', 'Ruby on Rails'],
+    example: `// Express route handler
+router.get('/users/:id',
+  requireAuth,           // JWT middleware
+  validate(getUserSchema), // Zod schema
+  async (req, res) => {
+    const { id } = req.params;
+
+    // 1. Cache check (read-aside)
+    const cached = await redis.get(\`user:\${id}\`);
+    if (cached) return res.json({ data: JSON.parse(cached) });
+
+    // 2. DB query (cache miss)
+    const user = await db.users.findById(id);
+    if (!user) return res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'User not found' }
+    });
+
+    // 3. Populate cache, return response
+    await redis.setex(\`user:\${id}\`, 300, JSON.stringify(user));
+    res.json({ data: user, meta: { requestId: req.headers['x-request-id'] } });
+  }
+);`
+  },
+  {
+    id: 'cache', num: '07', name: 'Cache Layer', sub: 'Fast Reads [Redis]',
+    color: '#22D3EE', apiCore: true,
+    what: 'An in-memory store checked before hitting the database. A cache hit returns data in ~1ms vs ~50ms for a database query — a 50x speed difference.',
+    how: [
+      'Read-aside (lazy): app checks cache; on miss, loads from DB and stores in cache',
+      'Write-through: write to cache and DB simultaneously on every update (strong consistency)',
+      'Write-behind: write to cache, flush to DB asynchronously (high throughput, risk of data loss)',
+      'Cache key design: resource:id → user:42, orders:userId:7:page:2',
+      'TTL (Time-To-Live): set expiry so stale data auto-expires (e.g. 300 seconds)',
+      'Invalidation: explicitly delete cache key when the underlying data changes'
+    ],
+    tools: ['Redis', 'Memcached', 'AWS ElastiCache', 'Hazelcast', 'DragonflyDB'],
+    example: `// Read-aside pattern
+const key = \`user:\${userId}\`;
+
+// Cache HIT → ~1ms, zero DB load
+const hit = await redis.get(key);
+if (hit) return JSON.parse(hit);   // ← ~1ms
+
+// Cache MISS → ~50ms DB round-trip
+const user = await db.query(
+  'SELECT * FROM users WHERE id = $1', [userId]
+);
+
+// Store with TTL (auto-expire in 5 min)
+await redis.setex(key, 300, JSON.stringify(user));
+return user;  // ← ~51ms total
+
+// On user update, invalidate:
+await db.users.update(userId, data);
+await redis.del(\`user:\${userId}\`);  // force fresh load next request`
+  },
+  {
+    id: 'database', num: '08', name: 'Database', sub: 'Persistent Storage [PostgreSQL]',
+    color: '#2297F6', apiCore: true,
+    what: 'Persistent, ACID-compliant storage. The source of truth. SQL databases (PostgreSQL, MySQL) for relational data; NoSQL (MongoDB, DynamoDB) for flexible schemas or massive scale.',
+    how: [
+      'Connection pool (PgBouncer, HikariCP) reuses expensive TCP connections — don\'t open a new one per request',
+      'Query parser and planner analyzes the SQL, picks an optimal execution plan',
+      'Index lookup: B-tree index on primary key → O(log n) vs O(n) full table scan',
+      'ACID: Atomicity (all-or-nothing), Consistency, Isolation (concurrent txns), Durability (WAL)',
+      'Read replicas: route SELECT queries to replicas, writes to primary — scale reads horizontally',
+      'Result rows fetched, serialized, returned to the connection pool caller'
+    ],
+    tools: ['PostgreSQL', 'MySQL', 'MongoDB', 'DynamoDB', 'CockroachDB', 'Redis (KV store)'],
+    example: `-- Parameterized query → prevents SQL injection
+SELECT id, name, email, role, created_at
+FROM users
+WHERE id = $1          -- primary key index scan
+  AND deleted_at IS NULL
+LIMIT 1;
+
+-- EXPLAIN ANALYZE output:
+-- Index Scan using users_pkey on users
+-- Index Cond: (id = $1)
+-- Filter: (deleted_at IS NULL)
+-- Rows Removed by Filter: 0
+-- Actual time: 0.032ms    ← 32 microseconds!
+-- Cost: 0.28..8.30  Rows: 1
+
+-- With replica routing:
+-- Writes → primary (port 5432)
+-- Reads  → replica (port 5433)`
+  },
+  {
+    id: 'response', num: '09', name: 'Response Path', sub: 'Back to Client',
+    color: '#34D399',
+    what: 'The data travels back through the chain: service serializes JSON → gateway adds metadata → LB forwards → CDN optionally caches → browser parses and renders.',
+    how: [
+      'Service serializes data to JSON, sets HTTP status code (200, 201, 404...) and headers',
+      'Gateway adds: X-Request-Id, X-RateLimit-Remaining, CORS headers before forwarding',
+      'Load balancer forwards response over the keep-alive connection to the client',
+      'CDN caches the response if Cache-Control permits (public, max-age) — serves future identical requests from edge',
+      'Browser receives response: JSON.parse(), update React/Vue state, re-render UI',
+      'Browser stores response in HTTP cache keyed by URL for subsequent requests'
+    ],
+    tools: ['HTTP/2 multiplexing', 'gzip/brotli compression', 'ETag + If-None-Match', 'Cache-Control headers'],
+    example: `HTTP/2 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Encoding: gzip
+X-Request-Id: gw-8f3a-b291
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 846
+Cache-Control: private, max-age=60
+Access-Control-Allow-Origin: https://app.example.com
+
+{
+  "data": {
+    "id": 42,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "role": "admin",
+    "createdAt": "2024-03-15T10:30:00Z"
+  },
+  "meta": {
+    "requestId": "gw-8f3a-b291",
+    "duration": "47ms"     ← total server-side time
+  }
+}`
+  }
+];
+
+// Layer groupings for the 3-row layout
+const LAYERS = [
+  {
+    label: 'Network',
+    steps: [0, 1, 2],
+    connector: { dir: 'right', text: '↓ enters infrastructure' },
+    apiBoundaryAfter: true   // insert API contract marker after this row
+  },
+  {
+    label: 'Entry',
+    steps: [3, 4, 5],
+    connector: { dir: 'right', text: '↓ reaches data layer' }
+  },
+  {
+    label: 'Data',
+    steps: [6, 7, 8]
+  }
+];
+
+// ─── RENDER FLOW ─────────────────────────────────────────────────────────────
+let activeStep = null;
+
+function renderFlow() {
+  const container = document.getElementById('flowLayers');
+
+  LAYERS.forEach((layer, li) => {
+    // Row
+    const row = document.createElement('div');
+    row.className = 'flow-layer';
+
+    const label = document.createElement('div');
+    label.className = 'layer-label';
+    label.textContent = layer.label;
+    row.appendChild(label);
+
+    const stepsWrap = document.createElement('div');
+    stepsWrap.className = 'layer-steps';
+
+    layer.steps.forEach((si, idx) => {
+      const s = STEPS[si];
+      const card = document.createElement('div');
+      card.className = 'flow-step' + (s.apiCore ? ' api-core' : '');
+      card.style.setProperty('--step-color', s.color);
+      card.dataset.stepId = s.id;
+      card.innerHTML = `
+        ${s.apiCore ? '<span class="step-api-badge">API</span>' : ''}
+        <div class="step-dot"></div>
+        <div class="step-num">${s.num}</div>
+        <div class="step-name">${s.name}</div>
+        <div class="step-sub">${s.sub}</div>
+      `;
+      card.addEventListener('click', () => activateStep(s.id));
+      stepsWrap.appendChild(card);
+
+      if (idx < layer.steps.length - 1) {
+        const arr = document.createElement('div');
+        arr.className = 'flow-arrow';
+        arr.innerHTML = `<svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        stepsWrap.appendChild(arr);
+      }
+    });
+
+    row.appendChild(stepsWrap);
+    container.appendChild(row);
+
+    if (layer.connector) {
+      const conn = document.createElement('div');
+      conn.className = 'layer-connector ' + layer.connector.dir;
+      conn.innerHTML = `<span style="color:var(--muted2);font-size:13px">${layer.connector.text}</span>`;
+      container.appendChild(conn);
+    }
+
+    if (layer.apiBoundaryAfter) {
+      const bar = document.createElement('div');
+      bar.className = 'api-boundary-bar';
+      bar.innerHTML = `
+        <div class="api-boundary-line"></div>
+        <div class="api-boundary-label">API Contract boundary — steps below are your API</div>
+        <div class="api-boundary-line" style="background:linear-gradient(to left,rgba(52,211,153,0.25),transparent)"></div>
+      `;
+      container.appendChild(bar);
+    }
+  });
+}
+
+function activateStep(id) {
+  const s = STEPS.find(x => x.id === id);
+  if (!s) return;
+
+  // Update active card
+  document.querySelectorAll('.flow-step').forEach(el => {
+    el.classList.toggle('active', el.dataset.stepId === id);
+  });
+
+  // Show detail
+  document.querySelector('.detail-empty').style.display = 'none';
+  const inner = document.getElementById('detailInner');
+  inner.className = 'detail-inner visible';
+  inner.style.setProperty('--detail-color', s.color);
+
+  inner.innerHTML = `
+    <div class="detail-left">
+      <div class="detail-header">
+        <span class="detail-num">${s.num}</span>
+        <span class="detail-title">${s.name}</span>
+      </div>
+      <p class="detail-what">${s.what}</p>
+      <div class="detail-how-title">What happens here</div>
+      <ul class="detail-how">
+        ${s.how.map(h => `<li>${h}</li>`).join('')}
+      </ul>
+      <div class="detail-tools">
+        ${s.tools.map(t => `<span class="detail-tool">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="detail-right">
+      <div class="detail-code-title">Example</div>
+      <pre class="code-block">${escHtml(s.example)}</pre>
+    </div>
+  `;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── API TABS DATA ────────────────────────────────────────────────────────────
+const API_TABS = [
+  { id: 'rest', label: 'REST Basics' },
+  { id: 'anatomy', label: 'Request Anatomy' },
+  { id: 'response', label: 'Response Anatomy' },
+  { id: 'errors', label: 'Error Handling' },
+  { id: 'frontend', label: 'Frontend Usage' }
+];
+
+const TAB_CONTENT = {
+  rest: `
+    <div class="note-box"><strong>REST</strong> (Representational State Transfer) is an architectural style for APIs: stateless, resource-oriented, and using HTTP verbs to express intent.</div>
+    <div class="api-two-col">
+      <div>
+        <div class="sub-title">HTTP Methods → CRUD Mapping</div>
+        <table class="api-table">
+          <thead><tr><th>Method</th><th>CRUD</th><th>Endpoint Example</th><th>Idempotent?</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method-badge method-get">GET</span></td><td>Read</td><td><code>/users</code> or <code>/users/42</code></td><td style="color:var(--green)">✓ Yes</td></tr>
+            <tr><td><span class="method-badge method-post">POST</span></td><td>Create</td><td><code>/users</code></td><td style="color:var(--red)">✗ No</td></tr>
+            <tr><td><span class="method-badge method-put">PUT</span></td><td>Replace</td><td><code>/users/42</code></td><td style="color:var(--green)">✓ Yes</td></tr>
+            <tr><td><span class="method-badge method-patch">PATCH</span></td><td>Partial Update</td><td><code>/users/42</code></td><td style="color:var(--yellow)">~ Maybe</td></tr>
+            <tr><td><span class="method-badge method-delete">DELETE</span></td><td>Delete</td><td><code>/users/42</code></td><td style="color:var(--green)">✓ Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div class="sub-title">URL Design Conventions</div>
+        <ul class="tip-list">
+          <li><span class="tip-icon">✓</span> Use plural nouns: <code>/users</code> not <code>/user</code></li>
+          <li><span class="tip-icon">✓</span> Resource hierarchy: <code>/users/42/orders/7</code></li>
+          <li><span class="tip-icon">✓</span> Version in path: <code>/api/v1/users</code></li>
+          <li><span class="tip-icon">✓</span> Query params for filters: <code>?role=admin&amp;page=2&amp;limit=20</code></li>
+          <li><span class="tip-icon">✓</span> Lowercase, hyphen-separated: <code>/user-profiles</code></li>
+          <li><span class="warn-icon tip-icon">✗</span> No verbs in URLs: use <code>GET /users</code> not <code>/getUsers</code></li>
+          <li><span class="warn-icon tip-icon">✗</span> No trailing slashes: <code>/users/42</code> not <code>/users/42/</code></li>
+          <li><span class="warn-icon tip-icon">✗</span> Don't use PUT for partial updates — use PATCH</li>
+        </ul>
+      </div>
+    </div>
+  `,
+
+  anatomy: `
+    <div class="api-two-col" style="margin-bottom:24px">
+      <div>
+        <div class="sub-title">Request Structure</div>
+        <pre class="code-block">GET /api/v1/users/42?fields=name,email HTTP/1.1
+Host: api.example.com
+
+Authorization: Bearer &lt;jwt-token&gt;
+Accept: application/json
+Content-Type: application/json
+X-Request-Id: client-abc-123
+Accept-Encoding: gzip, br
+
+[empty line separates headers from body]
+
+{ "body": "only for POST/PUT/PATCH" }</pre>
+      </div>
+      <div>
+        <div class="sub-title">Where data lives in a request</div>
+        <table class="api-table">
+          <thead><tr><th>Location</th><th>Purpose</th><th>Access (Express)</th></tr></thead>
+          <tbody>
+            <tr><td>Path params</td><td>Identify a resource</td><td><code>req.params.id</code></td></tr>
+            <tr><td>Query string</td><td>Filter, sort, paginate</td><td><code>req.query.page</code></td></tr>
+            <tr><td>Request body</td><td>Data to create/update</td><td><code>req.body</code></td></tr>
+            <tr><td>Headers</td><td>Auth, metadata, format</td><td><code>req.headers.authorization</code></td></tr>
+            <tr><td>Cookies</td><td>Session tokens (web)</td><td><code>req.cookies.sessionId</code></td></tr>
+          </tbody>
+        </table>
+        <div class="sub-title" style="margin-top:16px">Key Request Headers</div>
+        <table class="api-table">
+          <thead><tr><th>Header</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>Authorization</code></td><td>Auth token: <code>Bearer &lt;jwt&gt;</code></td></tr>
+            <tr><td><code>Content-Type</code></td><td>Body format: <code>application/json</code></td></tr>
+            <tr><td><code>Accept</code></td><td>Expected response format</td></tr>
+            <tr><td><code>X-Request-Id</code></td><td>Unique ID for tracing</td></tr>
+            <tr><td><code>If-None-Match</code></td><td>Conditional GET with ETag</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="sub-title">Pagination query parameters</div>
+    <pre class="code-block">GET /api/v1/users?page=2&amp;limit=20&amp;sort=createdAt&amp;order=desc&amp;role=admin
+
+// Offset pagination (simple but slow for large datasets):
+?page=2&amp;limit=20   →  OFFSET 20 LIMIT 20
+
+// Cursor pagination (fast, consistent for large datasets):
+?cursor=eyJpZCI6MTAwfQ==&amp;limit=20   →  WHERE id &gt; 100 LIMIT 20
+
+// Response includes pagination meta:
+{ "data": [...], "meta": { "total": 847, "page": 2, "limit": 20, "nextCursor": "eyJpZ..." } }</pre>
+  `,
+
+  response: `
+    <div class="api-two-col" style="margin-bottom:20px">
+      <div>
+        <div class="sub-title">Standard Response Envelope</div>
+        <pre class="code-block">HTTP/2 200 OK
+Content-Type: application/json
+X-Request-Id: gw-8f3a-b291
+Cache-Control: private, max-age=60
+
+{
+  "data": {               ← the resource(s)
+    "id": 42,
+    "name": "Alice Johnson",
+    "email": "alice@example.com"
+  },
+  "meta": {               ← pagination / request info
+    "total": 1,
+    "requestId": "gw-8f3a-b291"
+  }
+}</pre>
+      </div>
+      <div>
+        <div class="sub-title">Important Response Headers</div>
+        <table class="api-table">
+          <thead><tr><th>Header</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>Content-Type</code></td><td>application/json; charset=utf-8</td></tr>
+            <tr><td><code>Cache-Control</code></td><td>How long clients can cache</td></tr>
+            <tr><td><code>ETag</code></td><td>Version hash for conditional GET</td></tr>
+            <tr><td><code>Location</code></td><td>URL of created resource (201)</td></tr>
+            <tr><td><code>X-Request-Id</code></td><td>Unique request identifier</td></tr>
+            <tr><td><code>X-RateLimit-Remaining</code></td><td>Requests left in window</td></tr>
+            <tr><td><code>Retry-After</code></td><td>When to retry (429 / 503)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="status-group">
+      <div class="status-group-title" style="color:var(--green)">2xx — Success</div>
+      <div class="status-grid">
+        <div class="status-item"><span class="status-code s2">200</span><span class="status-desc">OK — Successful GET, PUT, PATCH</span></div>
+        <div class="status-item"><span class="status-code s2">201</span><span class="status-desc">Created — POST succeeded; include Location header</span></div>
+        <div class="status-item"><span class="status-code s2">204</span><span class="status-desc">No Content — DELETE succeeded; no body</span></div>
+        <div class="status-item"><span class="status-code s2">206</span><span class="status-desc">Partial Content — range request (file streaming)</span></div>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-group-title" style="color:var(--cyan)">3xx — Redirect</div>
+      <div class="status-grid">
+        <div class="status-item"><span class="status-code s3">301</span><span class="status-desc">Moved Permanently — update your bookmarks</span></div>
+        <div class="status-item"><span class="status-code s3">302</span><span class="status-desc">Found — temporary redirect</span></div>
+        <div class="status-item"><span class="status-code s3">304</span><span class="status-desc">Not Modified — ETag matched; use cached version</span></div>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-group-title" style="color:var(--yellow)">4xx — Client Error (fix your request)</div>
+      <div class="status-grid">
+        <div class="status-item"><span class="status-code s4">400</span><span class="status-desc">Bad Request — malformed syntax, missing required field</span></div>
+        <div class="status-item"><span class="status-code s4">401</span><span class="status-desc">Unauthorized — missing or invalid token; authenticate</span></div>
+        <div class="status-item"><span class="status-code s4">403</span><span class="status-desc">Forbidden — authenticated but no permission</span></div>
+        <div class="status-item"><span class="status-code s4">404</span><span class="status-desc">Not Found — resource doesn't exist</span></div>
+        <div class="status-item"><span class="status-code s4">409</span><span class="status-desc">Conflict — state conflict (e.g. duplicate email)</span></div>
+        <div class="status-item"><span class="status-code s4">422</span><span class="status-desc">Unprocessable — semantic validation failure</span></div>
+        <div class="status-item"><span class="status-code s4">429</span><span class="status-desc">Too Many Requests — rate limited; check Retry-After</span></div>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-group-title" style="color:var(--red)">5xx — Server Error (retry with backoff)</div>
+      <div class="status-grid">
+        <div class="status-item"><span class="status-code s5">500</span><span class="status-desc">Internal Server Error — unexpected crash</span></div>
+        <div class="status-item"><span class="status-code s5">502</span><span class="status-desc">Bad Gateway — upstream service failed</span></div>
+        <div class="status-item"><span class="status-code s5">503</span><span class="status-desc">Service Unavailable — overloaded or down</span></div>
+        <div class="status-item"><span class="status-code s5">504</span><span class="status-desc">Gateway Timeout — upstream took too long</span></div>
+      </div>
+    </div>
+  `,
+
+  errors: `
+    <div class="api-two-col">
+      <div>
+        <div class="sub-title">Standard Error Response Format</div>
+        <pre class="code-block">HTTP/2 422 Unprocessable Entity
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "Must be a valid email address",
+        "value": "not-an-email"
+      },
+      {
+        "field": "age",
+        "message": "Must be at least 18",
+        "value": 15
+      }
+    ]
+  },
+  "meta": {
+    "requestId": "gw-8f3a-b291",
+    "timestamp": "2026-05-27T10:30:00Z"
+  }
+}</pre>
+        <div class="sub-title" style="margin-top:20px">Never expose in errors</div>
+        <ul class="tip-list">
+          <li><span class="warn-icon tip-icon">✗</span> Stack traces in production responses</li>
+          <li><span class="warn-icon tip-icon">✗</span> Database query text or table names</li>
+          <li><span class="warn-icon tip-icon">✗</span> Internal IP addresses or service names</li>
+          <li><span class="warn-icon tip-icon">✗</span> Detailed auth failure reason (user doesn't exist vs wrong password)</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-title">4xx vs 5xx — Who's at fault?</div>
+        <div class="panel-card" style="margin-bottom:12px">
+          <div class="panel-card-title" style="color:var(--yellow)">4xx — Client Error</div>
+          <ul class="tip-list">
+            <li><span class="tip-icon">→</span> The request was wrong — don't retry as-is</li>
+            <li><span class="tip-icon">→</span> Fix the input, then re-submit</li>
+            <li><span class="tip-icon">→</span> Show user-friendly validation messages</li>
+            <li><span class="tip-icon">→</span> Log for debugging but don't alert on-call</li>
+          </ul>
+        </div>
+        <div class="panel-card" style="margin-bottom:20px">
+          <div class="panel-card-title" style="color:var(--red)">5xx — Server Error</div>
+          <ul class="tip-list">
+            <li><span class="tip-icon">→</span> The server failed — safe to retry</li>
+            <li><span class="tip-icon">→</span> Use exponential backoff: 1s → 2s → 4s → 8s</li>
+            <li><span class="tip-icon">→</span> Add jitter to avoid thundering herd</li>
+            <li><span class="tip-icon">→</span> Alert on-call; log with full context</li>
+          </ul>
+        </div>
+        <div class="sub-title">Retry strategy</div>
+        <pre class="code-block">async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 0; attempt &lt; maxRetries; attempt++) {
+    const res = await fetch(url, options);
+    if (res.ok) return res;
+
+    // Don't retry 4xx — client error
+    if (res.status &lt; 500) throw new ApiError(res);
+
+    // 5xx: wait then retry
+    if (attempt &lt; maxRetries - 1) {
+      const delay = Math.min(1000 * 2 ** attempt, 10000)
+        + Math.random() * 500;  // jitter
+      await sleep(delay);
+    }
+  }
+  throw new Error('Max retries exceeded');
+}</pre>
+      </div>
+    </div>
+  `,
+
+  frontend: `
+    <div class="api-two-col">
+      <div>
+        <div class="sub-title">fetch API (vanilla JS)</div>
+        <pre class="code-block">// Base API helper
+async function apiRequest(path, options = {}) {
+  const res = await fetch(\`/api/v1\${path}\`, {
+    headers: {
+      'Authorization': \`Bearer \${getToken()}\`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...options.headers
+    },
+    ...options
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw Object.assign(
+      new Error(err.error?.message || 'Request failed'),
+      { status: res.status, code: err.error?.code }
+    );
+  }
+  return res.json();  // → { data, meta }
+}
+
+// Usage
+const { data: user } = await apiRequest('/users/42');
+
+const { data: newUser } = await apiRequest('/users', {
+  method: 'POST',
+  body: JSON.stringify({ name: 'Alice', email: 'alice@example.com' })
+});</pre>
+      </div>
+      <div>
+        <div class="sub-title">Axios with interceptors</div>
+        <pre class="code-block">import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api/v1',
+  timeout: 10000,
+});
+
+// Attach token to every request
+api.interceptors.request.use(config =&gt; {
+  config.headers.Authorization = \`Bearer \${getToken()}\`;
+  return config;
+});
+
+// Handle auth expiry globally
+api.interceptors.response.use(
+  res =&gt; res.data,    // unwrap { data, meta }
+  error =&gt; {
+    if (error.response?.status === 401) {
+      logout();        // token expired → redirect to login
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Usage — clean and simple
+const user = await api.get('/users/42');   // → { id, name... }
+const newUser = await api.post('/users', payload);</pre>
+        <div class="sub-title" style="margin-top:20px">React — loading + error states</div>
+        <pre class="code-block">function UserProfile({ userId }) {
+  const [state, setState] = useState({
+    data: null, loading: true, error: null
+  });
+
+  useEffect(() =&gt; {
+    let cancelled = false;
+    api.get(\`/users/\${userId}\`)
+      .then(data =&gt; !cancelled &amp;&amp; setState({ data, loading: false, error: null }))
+      .catch(err =&gt; !cancelled &amp;&amp; setState({ data: null, loading: false, error: err.message }));
+    return () =&gt; { cancelled = true; }; // cleanup
+  }, [userId]);
+
+  if (state.loading) return &lt;Spinner /&gt;;
+  if (state.error)   return &lt;ErrorBanner msg={state.error} /&gt;;
+  return &lt;UserCard user={state.data} /&gt;;
+}</pre>
+      </div>
+    </div>
+  `
+};
+
+// ─── RENDER API TABS ──────────────────────────────────────────────────────────
+function renderTabs() {
+  const list = document.getElementById('apiTabsList');
+  const content = document.getElementById('apiTabsContent');
+
+  API_TABS.forEach((tab, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = tab.label;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.api-tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tab.id).classList.add('active');
+    });
+    list.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'api-tab-panel' + (i === 0 ? ' active' : '');
+    panel.id = 'tab-' + tab.id;
+    panel.innerHTML = TAB_CONTENT[tab.id];
+    content.appendChild(panel);
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderFlow();
+renderTabs();
+</script>
+</body>
+</html>
