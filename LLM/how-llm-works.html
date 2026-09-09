@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>How LLMs Work — Complete Layman Guide</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html" class="active">0 · How LLMs Work</a>
+  <a href="foundations.html">1 · Foundations</a>
+  <a href="architecture.html">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API &amp; Prompts</a>
+  <a href="rag-langchain.html">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html">6 · Production</a>
+  <a href="open-source.html">7 · Fine-tuning</a>
+  <a href="trends.html">8 · Trends</a>
+  <a href="comparison.html">9 · Compare</a>
+  <a href="when-to-use.html">10 · When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step active" style="color:#3ecf8e;border-color:#3ecf8e">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>
+  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(62,207,142,.12);border:1px solid rgba(62,207,142,.35);color:#3ecf8e">Start Here — Layman Guide</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#3ecf8e,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">How LLMs Work — Complete Picture</h1>
+  <p>From raw text all the way to a response in your browser — explained simply, with no assumed knowledge. Read this before any other module.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  PART 1 — TRAINING PHASE                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+
+<div style="margin-bottom:10px">
+  <div class="sec-title"><span>🏋️</span> Part 1 — Training Phase</div>
+  <div class="sec-sub">Happens once, before you ever use the model. This is how the model learns language.</div>
+</div>
+
+<!-- GOAL -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">G</div>
+    <div><div class="bh-title">The One Goal of Training</div><div class="bh-sub">Everything reduces to this</div></div>
+  </div>
+  <div class="block-body">
+    <p>The entire training phase has one single objective:</p>
+    <div class="diagram"><pre>
+Given the words so far → predict the next word.
+
+"The cat sat on the ___"   →   model must predict what comes next
+    </pre></div>
+    <p>That's it. The model is shown billions of sentences, asked to predict the next word each time, told how wrong it was, and adjusts itself to guess better. Repeat enough times — it learns language.</p>
+    <div class="simple-terms"><span class="st-label">💡 Analogy:</span> Teaching a child to read by showing them billions of books. The child doesn't memorize the books — they learn the <em>patterns</em> of language. Same here.</div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">1</div>
+    <div><div class="bh-title">Feed Raw Text — Tokenization</div><div class="bh-sub">Text → numbers the model can work with</div></div>
+  </div>
+  <div class="block-body">
+    <p>Trillions of sentences are fed in from the internet, books, Wikipedia, code, etc. But the model cannot read text — it only understands numbers.</p>
+    <div class="diagram"><pre>
+"Paris is the capital of France"
+            ↓  Tokenizer (BPE / SentencePiece)
+["Paris", "is", "the", "capital", "of", "France"]
+            ↓
+[  4881,   318,  262,    3139,    286,    4881  ]
+
+Numbers only. Model never sees raw text.
+    </pre></div>
+    <p>Tokens are not always whole words — "unhappiness" might become ["un", "happiness"]. Special tokens mark the start and end of sequences.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Think of tokens as the model's alphabet. Every sentence gets converted to a list of integer IDs before the model touches it.</div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">2</div>
+    <div><div class="bh-title">Each Token Gets a Starting Vector (Embedding)</div><div class="bh-sub">Token ID → a list of numbers = the word's identity fingerprint</div></div>
+  </div>
+  <div class="block-body">
+    <p>Each token ID is looked up in an <strong>embedding table</strong> — a giant lookup table where every token maps to a list of hundreds or thousands of numbers called a <strong>vector</strong>.</p>
+    <div class="diagram"><pre>
+Token ID 4881 ("Paris")   →  [0.71, -0.32, 0.88, 0.14, -0.55, ...]
+Token ID 3139 ("capital") →  [0.55, -0.12, 0.34, 0.91,  0.03, ...]
+Token ID 4881 ("France")  →  [0.71, -0.32, 0.88, 0.14, -0.55, ...]
+
+                              ↑ same token ID = same starting vector, every time
+    </pre></div>
+    <p>At this point the vector is just a rough identity card for the word — no context yet. "Bank" (river) and "bank" (money) both get the exact same starting vector here.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Imagine each word gets a passport photo — same photo every time it appears, before context changes anything.</div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">3</div>
+    <div><div class="bh-title">Tokens Look at Each Other — Self-Attention</div><div class="bh-sub">This is where context shapes meaning</div></div>
+  </div>
+  <div class="block-body">
+    <p>Every token asks every other token: <strong>"Are you relevant to me?"</strong> The answer reshapes each token's vector based on surrounding words.</p>
+    <div class="diagram"><pre>
+Sentence: "river bank"                  Sentence: "bank account"
+
+"bank" starting vector                  "bank" starting vector
+  [0.71, -0.32, 0.88 ...]                [0.71, -0.32, 0.88 ...]
+            ↓                                       ↓
+  attention sees "river"              attention sees "account"
+            ↓                                       ↓
+  pulls in water/nature meaning       pulls in finance/money meaning
+            ↓                                       ↓
+  final vector ≈ river bank concept   final vector ≈ financial bank concept
+
+Same starting vector → completely different final vector
+    </pre></div>
+    <p>This is the key mechanism that makes transformers powerful. The weights (numbers) in the attention layer are <strong>permanent after training</strong>. But what they produce — the activation — is different for every sentence.</p>
+    <div class="grid-2" style="margin-top:12px">
+      <div class="mini-card blue">
+        <div class="mc-title">Weights (Permanent)</div>
+        <div class="mc-body">The rules for how to reshape meaning based on context. Learned during training. Never change after training is done.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-title">Activations (Dynamic)</div>
+        <div class="mc-body">The actual values produced when running your specific input through those rules. Different every single query.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Analogy:</span> The dictionary has one entry for "bank". But when you read the sentence, your brain instantly uses surrounding words to pick the right meaning. Weights = the dictionary. Attention = your brain reading context.</div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">4</div>
+    <div><div class="bh-title">Many Layers Deepen the Understanding</div><div class="bh-sub">Attention + FFN repeated N times</div></div>
+  </div>
+  <div class="block-body">
+    <p>The attention + FFN block doesn't run just once. It repeats N times (e.g. 80 layers in large models). Each pass makes the meaning vector richer and more precise.</p>
+    <div class="diagram"><pre>
+Layer 1  →  basic relationships detected ("Paris" is near "capital")
+Layer 5  →  grammatical structure understood
+Layer 20 →  topic identified ("this is a geography question")
+Layer 50 →  intent understood ("user expects a city name as answer")
+Layer 80 →  final vector: "answer needed = European capital city of France"
+    </pre></div>
+    <p>After the FFN (Feed-Forward Network) at each layer, a <strong>residual connection</strong> adds the original input back — so the model never completely forgets the original word, it just enriches it layer by layer.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Like reading a sentence multiple times. First pass: notice the words. Second pass: notice the grammar. Third pass: understand the meaning. Each layer is one more pass at a deeper level.</div>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">5</div>
+    <div><div class="bh-title">Model Makes a Guess — Logits &amp; Probabilities</div><div class="bh-sub">Final vector compared against every word in vocabulary</div></div>
+  </div>
+  <div class="block-body">
+    <p>After all layers, the final vector at the blank position is compared against <strong>every word in the vocabulary</strong> (~100,000 words). The comparison is a dot product — how similar is this vector to each word's vector?</p>
+    <div class="diagram"><pre>
+Final meaning vector: "answer = European capital city of France"
+            ↓  compare against all vocabulary words
+"Paris"    →  96%    ← very similar
+"Lyon"     →   1.2%
+"London"   →   0.8%
+"Berlin"   →   0.5%
+"dog"      →   0.001%
+            ↓  sample from distribution
+Output: "Paris"
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> The model doesn't look up "France → Paris" in a table. It builds a meaning vector from context, then finds which word in the vocabulary sits closest to that meaning. "Paris" wins because training nudged its vector to sit very close to "capital city of France" questions.</div>
+  </div>
+</div>
+
+<!-- STEP 6 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">6</div>
+    <div><div class="bh-title">Check How Wrong It Was — Loss</div><div class="bh-sub">The wrongness score that drives all learning</div></div>
+  </div>
+  <div class="block-body">
+    <p>The real next word was "France". The model predicted it at 96% — not bad. But if it had said 2%, that's very wrong. This wrongness is measured as a number called the <strong>Loss</strong>.</p>
+    <div class="diagram"><pre>
+Real next word:  "France"
+Model's guess:   "France" = 96%   →  Loss ≈ small (good)
+
+Real next word:  "France"
+Model's guess:   "France" = 2%    →  Loss ≈ large (bad)
+
+Loss formula: L = -log(probability assigned to correct word)
+  -log(0.96) ≈ 0.04   ← small loss, nearly correct
+  -log(0.02) ≈ 3.91   ← large loss, very wrong
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Loss is the score on a test. 0 = perfect. The whole point of training is to drive this number as low as possible across billions of examples.</div>
+  </div>
+</div>
+
+<!-- STEP 7 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">7</div>
+    <div><div class="bh-title">Work Backwards to Find Who's to Blame — Backpropagation</div><div class="bh-sub">Every weight gets a blame score</div></div>
+  </div>
+  <div class="block-body">
+    <p>The model has billions of internal numbers (weights). Some contributed more to the wrong guess than others. <strong>Backpropagation</strong> works backwards through every layer using the chain rule of calculus to figure out: <em>"how much did each weight contribute to this error?"</em></p>
+    <div class="diagram"><pre>
+Loss
+  ↑
+Final linear layer weights        ← blame calculated here
+  ↑
+Layer 80 attention weights        ← blame calculated here
+  ↑
+Layer 79 FFN weights              ← blame calculated here
+  ↑
+  ... (all the way back to layer 1)
+  ↑
+Embedding weights                 ← blame calculated here
+
+Every single weight gets a gradient:
+  "if you increase by a tiny amount, loss changes by this much"
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Imagine tracing back every decision in a game to figure out which move caused the loss. Backprop does that mathematically, for every one of billions of weights, in one pass.</div>
+  </div>
+</div>
+
+<!-- STEP 8 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">8</div>
+    <div><div class="bh-title">Nudge Every Weight Slightly — AdamW Optimizer</div><div class="bh-sub">Tiny adjustments that accumulate into knowledge</div></div>
+  </div>
+  <div class="block-body">
+    <p>Using the blame scores from backprop, the <strong>optimizer</strong> nudges every weight in the direction that would have made the guess better. The nudge is tiny — but it happens billions of times.</p>
+    <div class="diagram"><pre>
+Before training step:   weight = 0.512
+Gradient says:          "decreasing this weight reduces loss"
+After optimizer nudge:  weight = 0.509   ← tiny change
+
+Repeat for all ~7 billion weights.
+Repeat for all ~1 trillion training tokens.
+
+After billions of nudges, the weights collectively encode:
+  ✓ "Paris" follows "capital of France"
+  ✓ "return a + b" follows "def add(a, b):"
+  ✓ medical terminology patterns
+  ✓ reasoning patterns
+  ✓ ...everything it was trained on
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Like a sculptor making millions of tiny chisels. No single chisel matters. But after enough of them, a face emerges. Training is the same — billions of tiny nudges, and understanding emerges.</div>
+  </div>
+</div>
+
+<!-- TRAINING END RESULT -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">✓</div>
+    <div><div class="bh-title">End Result — Frozen Trained Weights</div><div class="bh-sub">Training is done. The brain is built.</div></div>
+  </div>
+  <div class="block-body">
+    <p>After training, the model has a fixed set of billions of numbers that together encode a compressed understanding of language, facts, reasoning, and code. <strong>These weights are now frozen — training is complete.</strong></p>
+    <div class="grid-3" style="margin-top:4px">
+      <div class="mini-card green">
+        <div class="mc-title">What weights store</div>
+        <div class="mc-body">Compressed statistical patterns from everything the model ever read. Not sentences — rules for how meaning flows.</div>
+      </div>
+      <div class="mini-card blue">
+        <div class="mc-title">What weights don't store</div>
+        <div class="mc-body">Specific sentences, token IDs, or direct answers. No lookup table exists. Knowledge is distributed across all weights collectively.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-title">Fine-tuning (separate)</div>
+        <div class="mc-body">A separate phase after pre-training that teaches the model how to behave — follow instructions, be helpful, stay safe. Same training loop, different data.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="div" style="margin:36px 0"/>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  PART 2 — INFERENCE PHASE                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+
+<div style="margin-bottom:10px">
+  <div class="sec-title"><span>💬</span> Part 2 — Inference Phase</div>
+  <div class="sec-sub">Every time you ask a question. Model weights are frozen — they never change here.</div>
+</div>
+
+<!-- INF STEP 1 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">1</div>
+    <div><div class="bh-title">Your Question Gets Tokenized</div><div class="bh-sub">Same process as training — text → token IDs</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+You type:  "What is the capital of France?"
+                ↓  tokenizer
+["What", "is", "the", "capital", "of", "France", "?"]
+                ↓
+[1234,   318,   262,   3139,    286,   4881,     30]
+    </pre></div>
+    <p>A chat template is applied first — your message is wrapped with system prompt, role markers, and any conversation history before tokenization.</p>
+  </div>
+</div>
+
+<!-- INF STEP 2 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">2</div>
+    <div><div class="bh-title">Each Token Gets Its Starting Vector</div><div class="bh-sub">From the frozen embedding table — same weights as always</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Token ID 4881 ("France")   →  [0.71, -0.32, 0.88, ...]   ← same vector as always
+Token ID 3139 ("capital")  →  [0.55, -0.12, 0.34, ...]   ← same vector as always
+
+These are the PERMANENT weights.
+No context yet — "France" is just "France", not yet "France the country being asked about".
+    </pre></div>
+  </div>
+</div>
+
+<!-- INF STEP 3 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">3</div>
+    <div><div class="bh-title">All Tokens Processed in Parallel — Prefill</div><div class="bh-sub">Attention reshapes every vector using YOUR specific context</div></div>
+  </div>
+  <div class="block-body">
+    <p>Unlike generation (which is token-by-token), your entire input question is processed <strong>all at once in parallel</strong>. This is fast.</p>
+    <div class="diagram"><pre>
+["What", "is", "the", "capital", "of", "France", "?"]
+                  ↓  all 7 tokens simultaneously
+"capital" sees "France" + "?" → pulls geography + question intent
+"France"  sees "capital"      → activates capital-city meaning
+                  ↓  after all N layers
+Final vector at last position encodes:
+  "user is asking for the name of France's capital city"
+                  ↓
+KV Cache populated:  all K,V vectors for all 7 tokens saved
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 KV Cache:</span> During prefill, the Key and Value vectors for every token at every layer are saved. When generating the response, the model reuses these instead of recomputing them — so the expensive part (processing your question) only happens once.</div>
+  </div>
+</div>
+
+<!-- INF STEP 4 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">4</div>
+    <div><div class="bh-title">Sample the First Output Token</div><div class="bh-sub">Logits → probabilities → pick a word</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Final vector  →  compare against all 100k vocabulary words  →  scores (logits)
+                ↓  divide by temperature  (controls randomness)
+                ↓  softmax  (converts to probabilities)
+                ↓  top-p / top-k filter  (cuts unlikely words)
+                ↓  sample
+
+"Paris"    →  96%   ← sampled → first output token
+"Lyon"     →   1%
+"London"   →   0.8%
+    </pre></div>
+    <table class="data-table" style="margin-top:12px">
+      <thead><tr><th>Strategy</th><th>What it does</th><th>When used</th></tr></thead>
+      <tbody>
+        <tr><td>Temperature</td><td>Low = deterministic, High = creative/random</td><td>All generation</td></tr>
+        <tr><td>Top-p (nucleus)</td><td>Sample from smallest set of words summing to p% probability</td><td>Most chat models</td></tr>
+        <tr><td>Top-k</td><td>Sample from top k highest-probability words only</td><td>Combined with top-p</td></tr>
+        <tr><td>Greedy</td><td>Always pick the single highest probability word</td><td>Deterministic tasks</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- INF STEP 5 -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">5</div>
+    <div><div class="bh-title">Autoregressive Loop — Generate Token by Token</div><div class="bh-sub">Repeat until response is complete</div></div>
+  </div>
+  <div class="block-body">
+    <p>The model appends the new token to the sequence and runs a forward pass for just that one new token (all prior tokens are in the KV Cache). This repeats until an end token is produced or max length is reached.</p>
+    <div class="diagram"><pre>
+Input:   "What is the capital of France?"
+              ↓  prefill (process all at once)
+              ↓  KV Cache saved
+Predict: "Paris"     → append → KV Cache updated with "Paris"
+Predict: "."         → append → KV Cache updated with "."
+Predict: &lt;end token&gt; → stop
+
+Each prediction = one forward pass through all N layers
+But each pass only processes the ONE new token (cache handles the rest)
+→ Fast generation even for long responses
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Streaming:</span> Each token is sent to your browser the moment it is sampled — that's why you see the response appear word by word, not all at once.</div>
+  </div>
+</div>
+
+<hr class="div" style="margin:36px 0"/>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!--  COMPLETE FLOW DIAGRAM                             -->
+<!-- ═══════════════════════════════════════════════════ -->
+
+<div style="margin-bottom:10px">
+  <div class="sec-title"><span>🔗</span> Complete Flow — Training + Inference in One Diagram</div>
+  <div class="sec-sub">The full picture from raw text to your response</div>
+</div>
+
+<div class="diagram">
+<pre>
+╔══════════════════════════════════════════════════════════════════════════╗
+║  TRAINING PHASE  (happens once)                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+  Raw Text (trillions of sentences)
+        ↓  tokenize
+  Token IDs
+        ↓  embedding lookup  (random weights at start)
+  Starting vectors — same token = same vector, no context yet
+        ↓  self-attention  (tokens look at each other)
+  Context-aware vectors — same word, different meaning per sentence
+        ↓  FFN layers  (encode factual knowledge per position)
+  Enriched vectors
+        ↓  repeat attention + FFN × N layers
+  Deep meaning vectors
+        ↓  final linear layer
+  Logits — one score per vocabulary word
+        ↓  softmax
+  Probabilities — model's guess at next word
+        ↓  compare with real next word
+  Loss — how wrong was the guess?
+        ↓  backpropagation — blame flows back through all layers
+  Gradients on every weight
+        ↓  AdamW optimizer — nudge every weight slightly
+  Slightly better weights
+        ↓  repeat for billions of sentences
+  ┌─────────────────────────────────────────┐
+  │  FROZEN TRAINED WEIGHTS  ✓              │
+  │  billions of numbers encoding language  │
+  └─────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  INFERENCE PHASE  (every query)                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+  Your question: "What is the capital of France?"
+        ↓  tokenize
+  Token IDs  [1234, 318, 262, 3139, 286, 4881, 30]
+        ↓  embedding lookup  (from FROZEN weights)
+  Starting vectors — same permanent vectors as training
+        ↓  self-attention  (reshapes for YOUR specific context)
+  Context-aware vectors — unique to your query
+        ↓  N layers of attention + FFN  (same frozen weights, new activations)
+  Final meaning vector: "answer = capital city of France"
+        ↓  compare against all vocabulary words
+  Probabilities:  "Paris" = 96%,  "London" = 0.8%, ...
+        ↓  sample (temperature / top-p)
+  First token: "Paris"
+        ↓  KV Cache saves all prior work
+        ↓  append token, run forward pass on new token only, repeat
+  "Paris" → "." → &lt;end&gt;
+        ↓
+  Response streamed to you  ✓
+</pre>
+</div>
+
+<hr class="div" style="margin:36px 0"/>
+
+<!-- TRANSFORMER ARCHITECTURE SECTION -->
+<div style="margin-bottom:10px">
+  <div class="sec-title"><span>⚙️</span> Where Does the Transformer Architecture Fit?</div>
+  <div class="sec-sub">The transformer is the shared engine — not training, not inference, but the forward pass both phases run through</div>
+</div>
+
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">T</div>
+    <div><div class="bh-title">Transformer Architecture = Steps 2 → Logits (the Forward Pass)</div><div class="bh-sub">Everything inside here operates on token IDs and vectors — never actual words</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Token IDs
+    ↓  ┌─────────────────────────────────────────────────────┐
+       │           TRANSFORMER ARCHITECTURE                  │
+       │                                                     │
+       │  Embedding lookup    →  starting vectors            │
+       │  Positional encoding →  add position info           │
+       │                                                     │
+       │  × N Transformer Blocks:                            │
+       │    Self-Attention   →  tokens look at each other    │
+       │    FFN / MLP        →  enrich each position         │
+       │    LayerNorm + Residual connections                  │
+       │                                                     │
+       │  Final linear layer →  Logits                       │
+       └─────────────────────────────────────────────────────┘
+    ↓
+  HERE the two phases split:
+  Training  →  Loss → Backprop → Weight update   (outside transformer)
+  Inference →  Sampling → Output token            (outside transformer)
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Key point:</span> The transformer is not training and not inference — it is the shared engine that both phases run through. What you <em>do with the logits</em> at the end is what separates the two phases.</div>
+  </div>
+</div>
+
+<!-- MODEL NEVER SEES ACTUAL WORDS -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">!</div>
+    <div><div class="bh-title">The Model Never Sees Actual Words</div><div class="bh-sub">Text disappears at the tokenizer and only reappears at the very end</div></div>
+  </div>
+  <div class="block-body">
+    <p>Throughout the entire transformer — attention, FFN, all N layers — the model works exclusively with <strong>token IDs and vectors of numbers</strong>. The word "Paris" does not exist anywhere inside the model. Only its ID and its vector do.</p>
+    <div class="diagram"><pre>
+You type:    "What is the capital of France?"
+                        ↓
+Model sees:  [1234, 318, 262, 3139, 286, 4881, 30]    ← token IDs only
+                        ↓
+Works with:  vectors of numbers throughout             ← inside transformer
+                        ↓
+Produces:    logit scores (still numbers)
+                        ↓
+Decoder:     token ID 9823  →  "Paris"                ← actual word appears HERE, at the very end
+    </pre></div>
+
+    <p style="margin-top:12px">Every stage operates in a different "language":</p>
+    <table class="data-table" style="margin-top:10px">
+      <thead><tr><th>Stage</th><th>Input</th><th>Output</th><th>Actual words?</th></tr></thead>
+      <tbody>
+        <tr><td>Tokenizer</td><td>Text</td><td>Token IDs</td><td>Text → gone after this</td></tr>
+        <tr><td>Embedding lookup</td><td>Token IDs</td><td>Vectors</td><td>No</td></tr>
+        <tr><td>Self-Attention</td><td>Vectors</td><td>Vectors (reshaped)</td><td>No</td></tr>
+        <tr><td>FFN layers</td><td>Vectors</td><td>Vectors (enriched)</td><td>No</td></tr>
+        <tr><td>Final linear layer</td><td>Vectors</td><td>Logit scores</td><td>No</td></tr>
+        <tr><td>Softmax</td><td>Logits</td><td>Probabilities</td><td>No</td></tr>
+        <tr><td style="color:#3ecf8e">Decoder (tokenizer)</td><td style="color:#3ecf8e">Token ID</td><td style="color:#3ecf8e">Text</td><td style="color:#3ecf8e">YES — first time here</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Think of it like a phone call. You speak words → converted to electrical signals → travels as signals the whole way → converted back to words at the other end. The wire never carries actual words — only signals. Transformer is the wire.</div>
+  </div>
+</div>
+
+<hr class="div" style="margin:36px 0"/>
+
+<!-- SUMMARY TABLE -->
+<div style="margin-bottom:10px">
+  <div class="sec-title"><span>📊</span> Side-by-Side Summary</div>
+  <div class="sec-sub">Training vs. Inference — what's the same, what's different</div>
+</div>
+
+<table class="data-table">
+  <thead>
+    <tr><th></th><th>Training Phase</th><th>Inference Phase</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Goal</td><td>Learn weights from data</td><td>Use frozen weights to generate output</td></tr>
+    <tr><td>Weights</td><td>Updated every batch (billions of nudges)</td><td>Frozen — never change per query</td></tr>
+    <tr><td>Forward pass</td><td>Runs through same architecture</td><td>Runs through same architecture</td></tr>
+    <tr><td>After logits</td><td>Loss → backprop → optimizer update</td><td>Sampling → output token</td></tr>
+    <tr><td>KV Cache</td><td>Not used</td><td>Used — avoids recomputing past tokens</td></tr>
+    <tr><td>Key loop</td><td>Epoch/batch loop (millions of steps)</td><td>Token-by-token autoregressive loop</td></tr>
+    <tr><td>Data flow</td><td>Forward + backward (bidirectional)</td><td>Forward only</td></tr>
+    <tr><td>Cost driver</td><td>GPU-hours × parameter count × data size</td><td>Latency per token × context length</td></tr>
+    <tr><td>Activations</td><td>Computed and discarded each step</td><td>Dynamic — different per query</td></tr>
+  </tbody>
+</table>
+
+<div style="margin-top:24px">
+  <div class="sec-title" style="font-size:15px"><span>🧠</span> Three Things to Always Remember</div>
+</div>
+<div class="grid-3" style="margin-top:12px;margin-bottom:40px">
+  <div class="mini-card green">
+    <div class="mc-icon">🗄️</div>
+    <div class="mc-title">Weights = The Brain</div>
+    <div class="mc-body">Permanent numbers. Never change after training. Loaded into GPU memory and reused for every query.</div>
+  </div>
+  <div class="mini-card blue">
+    <div class="mc-icon">⚡</div>
+    <div class="mc-title">Activations = The Thought</div>
+    <div class="mc-body">Live values flowing through the frozen weights. Change every single query based on your specific input.</div>
+  </div>
+  <div class="mini-card purple">
+    <div class="mc-icon">🔍</div>
+    <div class="mc-title">Attention = Context Resolver</div>
+    <div class="mc-body">Uses permanent weights to reshape meaning based on current context. Same word = different meaning in different sentences.</div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<section style="padding:40px 0 8px">
+<div class="container">
+  <div class="sec-title"><span>🗺️</span> Your Learning Path — What to Read Next</div>
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:24px">Now that you have the end-to-end picture, here are three paths depending on what you want to build:</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:32px">
+
+    <div style="background:#1a1d27;border:1px solid rgba(79,142,247,.35);border-radius:12px;padding:20px;border-top:3px solid #4f8ef7">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4f8ef7;margin-bottom:10px">Path A — I want to understand LLMs deeply</div>
+      <ol style="margin:0 0 0 16px;padding:0;color:#94a3b8;font-size:13px;line-height:1.8">
+        <li><a href="foundations.html" style="color:#4f8ef7">Module 1 · Foundations</a> — probability, deep learning, training pipeline, text generation, scaling laws</li>
+        <li><a href="architecture.html" style="color:#4f8ef7">Module 2 · Architecture</a> — Transformer internals, tokenization, attention mechanism, model types</li>
+        <li><a href="trends.html" style="color:#4f8ef7">Module 8 · Trends</a> — what's replacing or improving the classic Transformer today</li>
+        <li><a href="comparison.html" style="color:#4f8ef7">Module 9 · Comparison</a> — old vs new side-by-side for each major concept</li>
+      </ol>
+    </div>
+
+    <div style="background:#1a1d27;border:1px solid rgba(62,207,142,.35);border-radius:12px;padding:20px;border-top:3px solid #3ecf8e">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#3ecf8e;margin-bottom:10px">Path B — I want to build LLM applications</div>
+      <ol style="margin:0 0 0 16px;padding:0;color:#94a3b8;font-size:13px;line-height:1.8">
+        <li><a href="api-prompts.html" style="color:#3ecf8e">Module 3 · API &amp; Prompts</a> — calling the OpenAI API, prompt engineering, few-shot, CoT, output control</li>
+        <li><a href="rag-langchain.html" style="color:#3ecf8e">Module 4 · RAG &amp; LangChain</a> — augment models with your own documents, vector stores, LangChain chains</li>
+        <li><a href="agents.html" style="color:#3ecf8e">Module 5 · Agents</a> — tool calling, ReAct loop, LangGraph, multi-agent orchestration</li>
+        <li><a href="production.html" style="color:#3ecf8e">Module 6 · Production</a> — LangSmith tracing, MCP data access, A2A protocol</li>
+        <li><a href="rag-pdf.html" style="color:#3ecf8e">Module 11 · PDF RAG</a> — multi-modal PDF pipelines, table extraction, hybrid retrieval</li>
+      </ol>
+    </div>
+
+    <div style="background:#1a1d27;border:1px solid rgba(244,114,182,.35);border-radius:12px;padding:20px;border-top:3px solid #f472b6">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f472b6;margin-bottom:10px">Path C — I want to fine-tune or deploy models</div>
+      <ol style="margin:0 0 0 16px;padding:0;color:#94a3b8;font-size:13px;line-height:1.8">
+        <li><a href="open-source.html" style="color:#f472b6">Module 7 · Fine-tuning</a> — HuggingFace, LoRA, QLoRA, quantization, RLHF, DPO, alignment</li>
+        <li><a href="foundations.html" style="color:#f472b6">Module 1 · Foundations</a> — training pipeline deep-dive (Blocks 2–3) before fine-tuning</li>
+        <li><a href="production.html" style="color:#f472b6">Module 6 · Production</a> — serving infrastructure, observability, deployment patterns</li>
+        <li><a href="when-to-use.html" style="color:#f472b6">Module 10 · When to Use What</a> — RAG vs fine-tuning, API vs self-hosted, which architecture to pick</li>
+      </ol>
+    </div>
+  </div>
+
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:12px;padding:18px 24px;display:flex;align-items:flex-start;gap:16px;margin-bottom:8px">
+    <span style="font-size:22px;flex-shrink:0">📌</span>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:6px">Not sure where to start?</div>
+      <p style="font-size:13px;color:#94a3b8;margin:0">Read <a href="when-to-use.html" style="color:#22d3ee">Module 10 · When to Use What</a> for a scenario-based decision guide — it tells you which technique to reach for given your specific requirements (latency, accuracy, cost, data sensitivity). Then follow the linked modules from there.</p>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<footer>LLM &amp; GenAI Complete Technical Guide — Module 0 · How LLMs Work — Start Here</footer>
+</body>
+</html>

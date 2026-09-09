@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 8 — Latest LLM Trends</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1·Foundations</a>
+  <a href="architecture.html">2·Architecture</a>
+  <a href="api-prompts.html">3·API</a>
+  <a href="rag-langchain.html">4·RAG</a>
+  <a href="agents.html">5·Agents</a>
+  <a href="production.html">6·Production</a>
+  <a href="open-source.html">7·Fine-tuning</a>
+  <a href="trends.html" class="active">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step active" style="color:#facc15;border-color:#facc15">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.35);color:#facc15">Module 8 — Latest Trends</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#facc15,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Latest LLM Architectures &amp; Research Trends</h1>
+  <p>Beyond the standard Transformer — Mixture of Experts, Mixture of Recursions, SSMs, reasoning models, test-time compute scaling, and what's next for LLMs in 2025.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- BLOCK 1: Mixture of Experts (MoE) -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(250,204,21,.2);color:#facc15">1</div>
+    <div><div class="bh-title">Mixture of Experts (MoE)</div><div class="bh-sub">Sparse activation — scale parameters without scaling compute</div></div>
+  </div>
+  <div class="block-body">
+    <p>A <strong>dense model</strong> activates every parameter for every token. A <strong>Mixture of Experts</strong> model has multiple parallel "expert" sub-networks (FFN blocks) but only activates a small subset per token — dramatically increasing parameter count without proportional compute increase.</p>
+    <div class="diagram"><pre>
+Dense Transformer FFN (every token uses all params):
+  Token → FFN(W₁, W₂) → output    [all 4096×16384 params active]
+
+MoE Transformer FFN (each token uses only 2 of 8 experts):
+  Token → Router → scores for Expert 1..8
+                    Top-2 selected: Expert 3, Expert 7
+  Token → Expert3(W₁³, W₂³) ─┐
+  Token → Expert7(W₁⁷, W₂⁷) ─┴→ weighted sum → output
+
+Parameter count:  8× experts × FFN params = 8× parameters
+Active params:    only 2/8 experts per token = same compute as 2× dense
+Efficiency gain:  8× parameters at 2× compute cost!
+
+Real examples:
+  Mixtral 8×7B:   56B total params, 13B active per token (2 of 8 experts)
+  GPT-4:          ~1.8T total params (rumoured), ~220B active (MoE)
+  Grok-1:         314B total, 86B active (2 of 8 experts)
+  DeepSeek-V3:    671B total, 37B active (fine-grained MoE, 256 experts)
+    </pre></div>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card yellow" style="border-top:3px solid #facc15">
+        <div class="mc-title">Router / Gating</div>
+        <div class="mc-body">A small linear layer produces softmax scores over all experts. Top-k (usually k=2) experts are selected. Router is learned during training.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-title">Load Balancing</div>
+        <div class="mc-body">Without balancing, a few experts get all tokens ("expert collapse"). Auxiliary loss penalises imbalance. Ensures all experts are used.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-title">Expert Specialisation</div>
+        <div class="mc-body">Experts naturally specialise — some handle code, others prose, others math. No explicit supervision needed; emerges from training.</div>
+      </div>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Using MoE models from JS — same API, different efficiency</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// MoE models are transparent at the API level — you call them exactly like dense models</span>
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>();
+
+<span class="cm">// Mixtral 8×7B via Together AI / Fireworks / Groq (faster, cheaper than GPT-4)</span>
+<span class="kw">const</span> together = <span class="kw">new</span> <span class="cl">OpenAI</span>({
+  baseURL: <span class="str">"https://api.together.xyz/v1"</span>,
+  apiKey:  process.env.<span class="cl">TOGETHER_API_KEY</span>,
+});
+
+<span class="kw">const</span> response = <span class="kw">await</span> together.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"mistralai/Mixtral-8x7B-Instruct-v0.1"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Explain MoE in simple terms."</span> }],
+});
+
+<span class="cm">// DeepSeek-V3 (671B MoE, state-of-the-art quality at low cost)
+// Available via DeepSeek API, Together, Fireworks, or self-hosted</span>
+<span class="kw">const</span> deepseek = <span class="kw">new</span> <span class="cl">OpenAI</span>({
+  baseURL: <span class="str">"https://api.deepseek.com/v1"</span>,
+  apiKey:  process.env.<span class="cl">DEEPSEEK_API_KEY</span>,
+});
+<span class="kw">const</span> r = <span class="kw">await</span> deepseek.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"deepseek-chat"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Hello"</span> }],
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Instead of one giant FFN that every token passes through, MoE gives each token a routing decision — "you go to Expert 3 and Expert 7". The model has 8× more parameters than an equivalent dense model but uses only 2× more compute per token, so you get a much smarter model at a lower per-token cost.</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: Mixture of Recursions (MoR) -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">2</div>
+    <div><div class="bh-title">Mixture of Recursions (MoR)</div><div class="bh-sub">2025 — adaptive compute depth per token via recursive layer reuse</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>Mixture of Recursions</strong> (Apple/MIT, 2025) is a novel architecture that combines <em>weight sharing</em> (sharing the same Transformer block weights across depth) with <em>dynamic routing</em> (a token can "recurse" through a block multiple times or skip it). Easy tokens get fewer passes; hard tokens get more.</p>
+    <div class="diagram"><pre>
+Standard Transformer — every token passes through every layer once:
+  Token → Block₁ → Block₂ → Block₃ → Block₄ → Block₅ → logits
+           [L1]     [L2]     [L3]     [L4]     [L5]
+
+Mixture of Recursions — shared weights, adaptive depth:
+  All blocks share the SAME weights (W₁, W₂ — one block)
+  A router decides how many times each token recurses through it
+
+  Easy token "the":    Block → Block → logits           (2 passes)
+  Medium token "runs": Block → Block → Block → logits   (3 passes)
+  Hard token "∫f(x)":  Block → Block → Block → Block → Block → logits (5 passes)
+
+  Parameters:  1 block worth of weights (memory efficient)
+  Compute:     variable per token (efficient for easy inputs)
+  Quality:     competitive with full depth at lower avg compute
+
+Key papers / models:
+  Universal Transformers (Dehghani 2019) — early weight-sharing
+  Recursive Transformers (Apple 2024)     — predecessor
+  Mixture of Recursions (2025)            — router + weight sharing combined
+    </pre></div>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="mini-card pink">
+        <div class="mc-title">Weight Sharing (Tied Layers)</div>
+        <div class="mc-body">All "layers" use the same weight matrix. Model learns one powerful transformation applied repeatedly. Memory = 1 layer, expressiveness grows with recursion depth.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-title">Dynamic Routing</div>
+        <div class="mc-body">A lightweight router scores each token at each iteration. High-confidence tokens exit early. Ambiguous/complex tokens get more iterations. Budget can be set at inference time.</div>
+      </div>
+    </div>
+    <div class="diagram"><pre>
+MoR vs MoE comparison:
+  MoE: same depth, more width (more experts, but each used once)
+  MoR: same width, variable depth (one expert, used multiple times)
+
+  They can be COMBINED: each "expert" in MoE can itself be a recursive block.
+  This is the direction of next-gen architectures (Recursive MoE).
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> MoR asks: why give a space character the same compute as a complex equation? One shared block's weights are reused recursively — simple tokens exit after 1 pass, complex ones get up to R passes. The model becomes deep when needed and shallow when not, using far fewer total FLOPs. Still research-only in 2025, but a compelling direction.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: State Space Models (Mamba/RWKV) -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">3</div>
+    <div><div class="bh-title">State Space Models — Mamba &amp; RWKV</div><div class="bh-sub">Linear-time sequence modelling — replacing quadratic attention</div></div>
+  </div>
+  <div class="block-body">
+    <p>Standard attention is <strong>O(n²)</strong> — doubling sequence length quadruples cost. State Space Models (SSMs) achieve <strong>O(n)</strong> linear complexity by maintaining a compact hidden state, making them dramatically faster for long sequences.</p>
+    <div class="diagram"><pre>
+Transformer Attention (quadratic):
+  Every token attends to every other token.
+  Sequence 1K tokens:    1M operations
+  Sequence 100K tokens:  10B operations  ← 10,000× slower
+
+Mamba (linear via selective SSM):
+  Maintains a fixed-size hidden state h that is updated token by token.
+  Key innovation: SELECTIVE state spaces — Δ, B, C matrices are input-dependent
+  (unlike old S4 models which had fixed parameters)
+  Sequence 1K tokens:    1K operations
+  Sequence 100K tokens:  100K operations  ← scales linearly!
+
+  State update:  h_t = A·h_{t-1} + B·x_t
+  Output:        y_t = C·h_t
+
+RWKV (Receptance Weighted Key Value):
+  Combines RNN-style recurrence with attention-like expressiveness
+  Inference: O(1) per token (constant memory, no KV cache growth)
+  Training:  parallelisable like Transformer via WKV kernel
+
+Hybrid (best of both worlds):
+  Jamba (AI21):  Mamba + Transformer layers interleaved
+  Zamba:         SSM backbone + sparse attention every N layers
+  → Near-Mamba efficiency with Transformer-quality long-range reasoning
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Running Mamba models via Transformers.js / HF Inference API</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Mamba models are available on HF Hub and usable via the standard Inference API</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+<span class="kw">const</span> hf = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+
+<span class="cm">// Mamba-2 — linear attention model</span>
+<span class="kw">const</span> result = <span class="kw">await</span> hf.<span class="fn">textGeneration</span>({
+  model:  <span class="str">"state-spaces/mamba-2.8b-hf"</span>,
+  inputs: <span class="str">"The key advantage of Mamba over Transformers is"</span>,
+  parameters: { max_new_tokens: <span class="num">100</span>, temperature: <span class="num">0.7</span> },
+});
+
+<span class="cm">// RWKV — runs efficiently even at 100K+ tokens</span>
+<span class="kw">const</span> rwkv = <span class="kw">await</span> hf.<span class="fn">textGeneration</span>({
+  model:  <span class="str">"RWKV/rwkv-6-world-7b"</span>,
+  inputs: <span class="str">"Long document text here..."</span>,
+  parameters: { max_new_tokens: <span class="num">500</span> },
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Standard attention stores and reads an n×n matrix in memory — cost explodes at 32K+ tokens. Mamba compresses all past context into a fixed-size hidden state and updates it in O(1) per token. Perfect for streaming tasks (audio, genomics, real-time feeds) where you do not need to recall arbitrary past tokens precisely.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: Reasoning Models & Test-Time Compute -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">4</div>
+    <div><div class="bh-title">Reasoning Models &amp; Test-Time Compute Scaling</div><div class="bh-sub">o1 · o3 · DeepSeek-R1 · QwQ — think longer, answer better</div></div>
+  </div>
+  <div class="block-body">
+    <p>Standard LLMs improve by training more. <strong>Reasoning models</strong> improve at inference time — they generate a long internal <em>chain of thought</em> before answering. Trading compute for quality <em>at inference time</em> is the key new paradigm.</p>
+    <div class="diagram"><pre>
+Standard model (fast, single pass):
+  User: "Prove that √2 is irrational"
+  Model: [one forward pass] → answer (may be wrong)
+
+Reasoning model (think longer → better answer):
+  User: "Prove that √2 is irrational"
+  &lt;think&gt;
+    Let me assume √2 = p/q in lowest terms...
+    Then 2 = p²/q², so p² = 2q², so p² is even...
+    Therefore p is even. Let p = 2k. Then 4k² = 2q²...
+    So q² = 2k², meaning q is also even...
+    But p/q in lowest terms can't both be even. Contradiction!
+  &lt;/think&gt;
+  "Proof by contradiction: assume √2 = p/q in lowest terms..."
+
+Test-Time Compute Scaling Law (Snell et al. 2024):
+  More inference compute → better answers, following a power law
+  Similar to how more training compute → smarter models (Chinchilla law)
+  Key insight: for hard problems, it's more efficient to "think more"
+               than to use a bigger model that "thinks once"
+
+Models:
+  OpenAI o1 / o3:     internal CoT, RLVR training (RL with verifiable rewards)
+  DeepSeek-R1:        open-source, 671B MoE + reasoning, matches o1
+  QwQ-32B (Qwen):     32B reasoning model, open-source, near o1 quality
+  Claude 3.7 Sonnet:  extended thinking mode (variable compute budget)
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Calling reasoning models from JS</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// OpenAI o3-mini — set reasoning_effort: "low" | "medium" | "high"</span>
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>();
+
+<span class="kw">const</span> o3Response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:            <span class="str">"o3-mini"</span>,
+  reasoning_effort: <span class="str">"high"</span>,   <span class="cm">// more thinking tokens = better quality, higher cost</span>
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Prove that √2 is irrational."</span> }],
+});
+
+<span class="cm">// Claude 3.7 Sonnet — extended thinking (budget_tokens controls thinking depth)</span>
+<span class="kw">import</span> Anthropic <span class="kw">from</span> <span class="str">"@anthropic-ai/sdk"</span>;
+<span class="kw">const</span> anthropic = <span class="kw">new</span> <span class="cl">Anthropic</span>();
+
+<span class="kw">const</span> claudeResponse = <span class="kw">await</span> anthropic.messages.<span class="fn">create</span>({
+  model:      <span class="str">"claude-3-7-sonnet-20250219"</span>,
+  max_tokens: <span class="num">16000</span>,
+  thinking: { type: <span class="str">"enabled"</span>, budget_tokens: <span class="num">10000</span> },  <span class="cm">// up to 10k thinking tokens</span>
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Solve this step by step: ..."</span> }],
+});
+<span class="cm">// Response includes thinking blocks + final answer block</span>
+<span class="kw">const</span> thinking = claudeResponse.content.<span class="fn">find</span>(b => b.type === <span class="str">"thinking"</span>);
+<span class="kw">const</span> answer   = claudeResponse.content.<span class="fn">find</span>(b => b.type === <span class="str">"text"</span>);
+
+<span class="cm">// DeepSeek-R1 (open-source, reasoning model) via Together AI</span>
+<span class="kw">const</span> together = <span class="kw">new</span> <span class="cl">OpenAI</span>({ baseURL: <span class="str">"https://api.together.xyz/v1"</span>, apiKey: process.env.<span class="cl">TOGETHER_API_KEY</span> });
+<span class="kw">const</span> r1 = <span class="kw">await</span> together.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"deepseek-ai/DeepSeek-R1"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Prove that √2 is irrational."</span> }],
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Standard LLMs go prompt → answer immediately. Reasoning models go prompt → extended thinking (2,000–50,000 tokens of internal dialogue) → answer. The thinking is expensive but unlocks skills that are impossible without it — like solving AIME math problems or generating correct multi-file code changes. Spend more tokens thinking = better answer, without training a bigger model.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: Small Language Models (SLMs) -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">5</div>
+    <div><div class="bh-title">Small Language Models (SLMs)</div><div class="bh-sub">Phi · Qwen · Llama 3.2 1B — GPT-4 quality tasks on edge hardware</div></div>
+  </div>
+  <div class="block-body">
+    <p>2024–2025 showed that careful data curation and training recipes can produce small models (&lt;10B params) that beat older large models on many tasks. SLMs enable on-device AI, lower cost, faster inference, and privacy.</p>
+    <div class="diagram"><pre>
+SLM Leaderboard (approximate, task-dependent):
+  Model           Size   Context  Runs on        Key strength
+  ─────────────────────────────────────────────────────────────
+  Phi-3.5-mini    3.8B   128K     laptop CPU     Data quality focus (textbooks)
+  Phi-4           14B    16K      1× RTX 4090    STEM, reasoning, outperforms GPT-3.5
+  Qwen2.5-7B      7B     128K     1× RTX 3080    Coding, multilingual, math
+  Qwen2.5-Coder   7B     128K     1× RTX 3080    Best-in-class code generation at 7B
+  Llama-3.2-1B    1B     128K     phone / Pi     On-device, offline capable
+  Llama-3.2-3B    3B     128K     laptop         Strong general purpose at 3B
+  Gemma-2-9B      9B     8K       1× GPU         Google quality, open weights
+  SmolLM2-1.7B    1.7B   8K       browser (WASM) Designed for Transformers.js
+
+Key insight: "Less but better data" > "more data"
+  Phi models trained on synthetic "textbook quality" data
+  outperform models 10× their size on reasoning benchmarks.
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>SLMs in the browser with Transformers.js</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Run entirely in the browser — no server, no API key, works offline</span>
+<span class="cm">// npm install @xenova/transformers  (or use CDN)</span>
+<span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">"https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"</span>;
+
+<span class="cm">// SmolLM2 — designed for browser inference</span>
+<span class="kw">const</span> generator = <span class="kw">await</span> <span class="fn">pipeline</span>(<span class="str">"text-generation"</span>, <span class="str">"HuggingFaceTB/SmolLM2-360M-Instruct"</span>);
+
+<span class="cm">// Stream tokens to the DOM in real-time</span>
+<span class="kw">const</span> output = <span class="kw">await</span> generator(
+  [{ role: <span class="str">"user"</span>, content: <span class="str">"Summarise the Eiffel Tower in 2 sentences."</span> }],
+  {
+    max_new_tokens: <span class="num">100</span>,
+    callback_function: (x) => {
+      document.<span class="fn">getElementById</span>(<span class="str">"output"</span>).textContent += x[<span class="num">0</span>].output_token_ids ?? <span class="str">""</span>;
+    },
+  }
+);</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> A fine-tuned 3.8B model on a specific task often matches or beats a generic 70B model — and it runs on a phone. Phi-3.5 Mini achieves GPT-3.5-level quality because it was trained on extremely curated textbook-quality data rather than just raw internet dumps. Quality of training data beats quantity of parameters for narrow domains.</div>
+  </div>
+</div>
+
+<!-- BLOCK 6: Multi-modal Models -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">6</div>
+    <div><div class="bh-title">Multi-modal Models — Vision, Audio &amp; Beyond</div><div class="bh-sub">GPT-4o · Claude 3.5 · Gemini 1.5 — unified models across modalities</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Modality Stack (2025):
+
+  Text  ──┐
+  Image ──┤──▶ Encoder ──▶ Shared Embedding Space ──▶ LLM Backbone ──▶ Text / Image / Audio out
+  Audio ──┘
+
+Architecture approaches:
+  1. Adapter-based: freeze LLM + add modality-specific encoder + lightweight adapter
+     (LLaVA, BLIP-2, InstructBLIP)
+  2. Natively multi-modal: train unified model from scratch on all modalities
+     (GPT-4o, Gemini 1.5, Claude 3.5 Sonnet)
+  3. Any-to-any: generate images, audio, video natively (not just text)
+     (GPT-4o with image gen, Gemini Ultra)
+
+Vision capabilities maturity:
+  ✅ Image captioning, VQA        — production-ready
+  ✅ Document / PDF understanding — production-ready
+  ✅ Chart / diagram analysis     — production-ready
+  ⚠️ Fine-grained OCR             — improving
+  ⚠️ Video understanding          — limited context, improving
+  🔬 Real-time vision + action    — research / early products
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Vision API — image + text from JS</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+<span class="kw">import</span> fs     <span class="kw">from</span> <span class="str">"fs"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>();
+
+<span class="cm">// Option A: URL</span>
+<span class="kw">const</span> response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"gpt-4o"</span>,
+  messages: [{
+    role: <span class="str">"user"</span>,
+    content: [
+      { type: <span class="str">"text"</span>,      text: <span class="str">"What does this chart show?"</span> },
+      { type: <span class="str">"image_url"</span>, image_url: { url: <span class="str">"https://example.com/chart.png"</span> } },
+    ],
+  }],
+});
+
+<span class="cm">// Option B: Base64 local file</span>
+<span class="kw">const</span> imageData = fs.<span class="fn">readFileSync</span>(<span class="str">"./chart.png"</span>).<span class="fn">toString</span>(<span class="str">"base64"</span>);
+<span class="kw">const</span> r2 = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"gpt-4o"</span>,
+  messages: [{
+    role: <span class="str">"user"</span>,
+    content: [
+      { type: <span class="str">"text"</span>,      text: <span class="str">"Extract all data from this chart as JSON."</span> },
+      { type: <span class="str">"image_url"</span>, image_url: { url: <span class="str">`data:image/png;base64,<span class="kw">${imageData}</span>`</span> } },
+    ],
+  }],
+  response_format: { type: <span class="str">"json_object"</span> },
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Vision models tile your image into patches and treat each patch like a token. Sending one 1024×1024 image costs ~1700 tokens. In a JS app, you include an image_url or base64 string in the messages array and the model reasons over text and image together in one forward pass — no separate vision pipeline needed.</div>
+  </div>
+</div>
+
+<!-- BLOCK 7: Advanced Attention & Efficiency -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">7</div>
+    <div><div class="bh-title">Attention Efficiency Innovations</div><div class="bh-sub">FlashAttention · Sliding Window · Ring Attention · Speculative Decoding</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="mini-card orange">
+        <div class="mc-title">FlashAttention 2 / 3</div>
+        <div class="mc-body">Tiled, memory-efficient attention kernel. Avoids materialising full n×n attention matrix in HBM. 2–8× faster than standard attention. Used in all modern LLM training/inference. Transparent to API users.</div>
+      </div>
+      <div class="mini-card cyan">
+        <div class="mc-title">Sliding Window Attention</div>
+        <div class="mc-body">Each token only attends to a local window (e.g., last 4K tokens) instead of full context. Used in Mistral, Phi. Reduces memory from O(n²) to O(n×window). Some global attention layers mix in for coherence.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-title">Ring Attention</div>
+        <div class="mc-body">Distribute long-context attention across multiple GPUs in a ring. Each GPU handles a chunk; activations passed around the ring. Enables 1M+ token contexts across a GPU cluster.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-title">Speculative Decoding</div>
+        <div class="mc-body">Small draft model proposes K tokens. Large model verifies all K in one forward pass (K× faster). If tokens accepted, great. If rejected, large model corrects from that point. Used in Gemini, Claude.</div>
+      </div>
+    </div>
+    <div class="diagram"><pre>
+Speculative Decoding (2–4× inference speedup):
+
+  Draft model (small, fast) proposes 4 tokens:
+    "The sky is blue"
+
+  Target model (large, slow) verifies ALL 4 in one pass:
+    P("The") = 0.98 ✅   P("sky"|"The") = 0.87 ✅
+    P("is"|"The sky") = 0.92 ✅   P("blue"|...) = 0.63 ✅  all accepted!
+
+  Without speculative decoding: 4 separate large model forward passes
+  With speculative decoding:    1 large model pass to validate all 4
+  Speedup:                      ~3–4× for compatible prompts
+
+KV Cache Improvements (2024-2025):
+  PagedAttention (vLLM):  page-based memory for KV cache, eliminates fragmentation
+  RadixAttention:         tree-based prefix sharing across multiple requests
+  MLA (Multi-head Latent Attention, DeepSeek):  compress KV cache via low-rank projection
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> FlashAttention rewrites attention computation to stay inside the GPU's fast SRAM cache instead of repeatedly writing to slow HBM memory. Same mathematical result, 2–4× faster, 1000× less memory traffic at long contexts. It is now the default in every serious inference stack and is enabled automatically in PyTorch SDPA.</div>
+  </div>
+</div>
+
+<!-- BLOCK 8: GRPO & Modern Alignment -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">8</div>
+    <div><div class="bh-title">Modern Alignment — GRPO, RLVR &amp; Constitutional AI</div><div class="bh-sub">Beyond RLHF: scalable, stable reinforcement learning for LLMs</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+GRPO (Group Relative Policy Optimisation — DeepSeek 2024):
+  Like PPO but without a separate value/critic model.
+  For each prompt, sample G outputs, compute rewards, normalise within the group.
+  Policy gradient uses relative advantage (how much better than the group average).
+
+  G outputs from model → reward model scores each → normalise → gradient update
+  Key win: no value model = 50% fewer parameters to train = much more memory efficient
+
+RLVR (Reinforcement Learning with Verifiable Rewards):
+  Used by o1, DeepSeek-R1. Instead of a learned reward model, use HARD rewards:
+  ✅ Math: check if answer equals ground truth
+  ✅ Code: run tests — pass/fail
+  ✅ Logic: formal verifier
+  → Much more reliable than "does a reward model like this?"
+  → Models trained with RLVR spontaneously develop chain-of-thought reasoning
+
+Constitutional AI (Anthropic):
+  Stage 1: SFT on human feedback
+  Stage 2: Model critiques its own outputs against a "constitution" (list of principles)
+  Stage 3: RLAIF — AI-generated preference data replaces human annotators at scale
+  → Enables scalable alignment without massive human labelling cost
+
+Process Reward Models (PRM):
+  Traditional reward model: score the FINAL answer (outcome reward)
+  PRM: score each STEP of reasoning separately
+  → Catches reasoning errors early, much better for math/logic
+  → OpenAI Math-Shepherd, DeepSeek-PRM
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> GRPO and RLVR train the model by generating multiple answers to the same question, then rewarding only the verifiably correct ones. No human labellers, no reward model — just check whether the math answer matches. This created DeepSeek-R1's reasoning capability. Constitutional AI generates its own training critiques using a written set of principles, removing human labelling from alignment entirely.</div>
+  </div>
+</div>
+
+<!-- EDGE CASES -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">!</div>
+    <div><div class="bh-title">Edge Cases &amp; Practical Gotchas</div><div class="bh-sub">What trips up JS developers using cutting-edge models</div></div>
+  </div>
+  <div class="block-body">
+    <div class="edge-grid">
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">💸</div>
+        <div class="edge-title">Reasoning Model Cost Shock</div>
+        <div class="edge-desc">o3 with reasoning_effort:"high" can use 100k+ thinking tokens per request. At $15/M tokens, a single hard question can cost $1.50. Production apps can rack up $1000s/day unexpectedly.</div>
+        <div class="edge-fix">Cap thinking tokens (budget_tokens in Claude). Use "low" effort for routing/classification. Only use "high" for genuinely hard tasks. Monitor usage in real-time.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">🔄</div>
+        <div class="edge-title">MoE Expert Load Imbalance at Inference</div>
+        <div class="edge-desc">During fine-tuning on narrow domains, MoE models can develop "dead experts" — some experts get no tokens, losing capacity. Model quality degrades selectively.</div>
+        <div class="edge-fix">Verify expert utilisation metrics during SFT. Mix domain data with general data. Use existing well-trained MoE checkpoints rather than fine-tuning MoE from scratch.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">🔁</div>
+        <div class="edge-title">MoR Infinite Recursion</div>
+        <div class="edge-desc">Mixture of Recursions with a poorly calibrated router can loop the same block excessively for "uncertain" tokens, stalling inference with no output.</div>
+        <div class="edge-fix">Always set a max_iterations cap. Monitor per-token iteration counts during inference. MoR models should have a hard exit gate.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">📏</div>
+        <div class="edge-title">SSM Long-Context Degradation</div>
+        <div class="edge-desc">Mamba/RWKV compress history into a fixed-size state. For very long sequences, old information can be "forgotten" if newer tokens compress it out. Unlike transformers which always can attend back.</div>
+        <div class="edge-fix">For recall-heavy tasks (exact lookup in 100K doc), prefer Transformer-based long-context models. Use Mamba for tasks where recent context dominates.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">👁️</div>
+        <div class="edge-title">Vision Token Cost</div>
+        <div class="edge-desc">A 1024×1024 image tiles to ~1700 tokens (GPT-4o). Sending 10 images per request = 17,000 tokens just for images. Costs multiply fast in document processing pipelines.</div>
+        <div class="edge-fix">Downscale images before sending (detail:"low" = 85 tokens flat). Only send relevant crops. Cache vision embeddings for repeated analysis of the same image.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-l">LOW</span>
+        <div class="edge-icon">⏳</div>
+        <div class="edge-title">Speculative Decoding Latency Regression</div>
+        <div class="edge-desc">If the draft model frequently gets rejected (cold prompts, unusual domains), the overhead of running the draft model adds latency without benefit.</div>
+        <div class="edge-fix">Speculative decoding works best with aligned draft+target model families. Domain mismatch between draft and target degrades acceptance rate. Use standard decoding for low-temperature, high-rejection scenarios.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> The recurring theme across all 2025 trends: every technique has a trade-off. MoE needs all experts loaded in VRAM. Reasoning models are 100× more expensive than standard models for simple queries. SSMs lose precise long-range recall. SLMs underperform on genuinely novel tasks. Match the technique to the constraint — there is no universal winner.</div>
+    <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:12px;color:#94a3b8">
+      <span style="font-weight:700;color:#22d3ee">→ Cross-reference:</span> For a direct side-by-side comparison of each technique covered here (Dense vs MoE, Quadratic Attention vs Mamba/SSMs, Standard LLMs vs Reasoning Models, Full Fine-tune vs LoRA, PPO vs DPO), see <a href="comparison.html" style="color:#22d3ee">Module 9 · Old vs New Comparison</a>.
+    </div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 8 of 12 — ← <a href="open-source.html" style="color:#facc15">Module 7 · Open Source &amp; Fine-tuning</a> | <a href="comparison.html" style="color:#facc15">Module 9 · Old vs New Comparison →</a></footer>
+</body>
+</html>

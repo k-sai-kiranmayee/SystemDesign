@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 9 — Old vs New LLM Comparison</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+/* Comparison-specific styles */
+.cmp-block { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid rgba(255,255,255,.1); border-radius:12px; overflow:hidden; margin-bottom:32px; }
+.cmp-side { padding:24px; }
+.cmp-old { background:rgba(239,68,68,.07); border-right:1px solid rgba(255,255,255,.1); }
+.cmp-new { background:rgba(34,197,94,.07); }
+.cmp-label { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; }
+.cmp-label-old { color:#ef4444; }
+.cmp-label-new { color:#22c55e; }
+.cmp-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+.cmp-title-old { color:#fca5a5; }
+.cmp-title-new { color:#86efac; }
+.cmp-body { font-size:13px; color:#94a3b8; line-height:1.7; }
+.cmp-body ul { margin:8px 0 0 16px; padding:0; }
+.cmp-body li { margin-bottom:4px; }
+.cmp-verdict { background:rgba(99,102,241,.1); border:1px solid rgba(99,102,241,.3); border-radius:8px; padding:14px 18px; margin-top:16px; font-size:13px; color:#a5b4fc; }
+.cmp-verdict strong { color:#c7d2fe; }
+.cmp-diagram { background:#0f172a; border-radius:8px; padding:16px; font-size:12px; font-family:monospace; color:#94a3b8; white-space:pre; overflow-x:auto; margin:12px 0; line-height:1.6; }
+.versus-bar { display:flex; align-items:center; justify-content:center; gap:16px; margin:0 0 16px; font-size:12px; }
+.versus-badge { padding:4px 12px; border-radius:20px; font-weight:700; font-size:11px; letter-spacing:.05em; }
+.badge-old { background:rgba(239,68,68,.2); color:#ef4444; border:1px solid rgba(239,68,68,.4); }
+.badge-new { background:rgba(34,197,94,.2); color:#22c55e; border:1px solid rgba(34,197,94,.4); }
+.versus-mid { color:#64748b; font-weight:700; font-size:14px; }
+.metric-row { display:grid; grid-template-columns:120px 1fr 1fr; gap:8px; font-size:12px; margin:4px 0; }
+.metric-label { color:#64748b; font-weight:600; }
+.metric-old { color:#fca5a5; }
+.metric-new { color:#86efac; }
+.metric-table { border-collapse:collapse; width:100%; font-size:12px; margin:12px 0; }
+.metric-table th { background:rgba(255,255,255,.05); color:#94a3b8; padding:8px 12px; text-align:left; font-weight:600; }
+.metric-table td { padding:8px 12px; border-top:1px solid rgba(255,255,255,.05); color:#cbd5e1; }
+.metric-table tr td:first-child { color:#94a3b8; font-weight:600; }
+.metric-table .val-old { color:#fca5a5; }
+.metric-table .val-new { color:#86efac; }
+.when-to-use { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+.wtu-box { background:rgba(255,255,255,.04); border-radius:8px; padding:14px; font-size:12px; }
+.wtu-title { font-weight:700; margin-bottom:6px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+.wtu-old .wtu-title { color:#ef4444; }
+.wtu-new .wtu-title { color:#22c55e; }
+.wtu-box ul { margin:0 0 0 14px; padding:0; color:#94a3b8; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1·Foundations</a>
+  <a href="architecture.html">2·Architecture</a>
+  <a href="api-prompts.html">3·API</a>
+  <a href="rag-langchain.html">4·RAG</a>
+  <a href="agents.html">5·Agents</a>
+  <a href="production.html">6·Production</a>
+  <a href="open-source.html">7·Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html" class="active">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step active" style="color:#a78bfa;border-color:#a78bfa">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#a78bfa">Module 9 — Comparison</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#a78bfa,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Old vs New — Architecture &amp; Training Comparison</h1>
+  <p>Side-by-side analysis of traditional LLM approaches versus cutting-edge techniques — when to use which, and what actually changed.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 1: Dense Transformer vs MoE -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">1</div>
+    <div><div class="bh-title">Dense Transformer vs Mixture of Experts (MoE)</div><div class="bh-sub">Scaling parameters without scaling compute</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Dense Transformer</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Mixture of Experts</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional Approach</div>
+        <div class="cmp-title cmp-title-old">Dense Transformer FFN</div>
+        <div class="cmp-body">
+          Every token passes through the <em>same</em> FFN weights on every layer. All parameters are active for every forward pass.
+          <ul>
+            <li>GPT-2 117M → all 117M params active per token</li>
+            <li>Llama-3 8B → all 8B params active per token</li>
+            <li>GPT-3 175B → all 175B params active per token</li>
+            <li>Doubling capacity = doubling compute cost</li>
+            <li>No specialisation — every expert does everything</li>
+          </ul>
+          <div class="cmp-diagram">Token → Embed → [Attn → FFN(W₁,W₂)] × L → LM-Head
+FFN: hidden = ReLU(xW₁ + b₁) · W₂ + b₂
+     W₁ ∈ R^{d_model × d_ffn}  (ALL params active)</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern Approach</div>
+        <div class="cmp-title cmp-title-new">Mixture of Experts (MoE)</div>
+        <div class="cmp-body">
+          Each token is routed to only k=2 of N expert FFNs. Most parameters are "dormant" — capacity scales cheaply.
+          <ul>
+            <li>Mixtral 8×7B → 56B params, only 13B active/token</li>
+            <li>DeepSeek-V3 → 671B params, only 37B active/token</li>
+            <li>GPT-4 (rumoured) → ~1.8T params, ~220B active</li>
+            <li>4-8× parameters at 1.5-2× compute vs same-compute dense</li>
+            <li>Experts naturally specialise (code, math, language)</li>
+          </ul>
+          <div class="cmp-diagram">Token → Router → softmax(W_r · x) → top-2 experts
+         ↓ weights  [0.6, 0.4]
+Token → Expert₃(W₁³,W₂³) → output₃  × 0.6
+Token → Expert₇(W₁⁷,W₂⁷) → output₇  × 0.4
+                                    ↓ weighted sum</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Dense (7B)</th><th class="val-new">MoE (56B total / 13B active)</th></tr>
+      <tr><td>Total params</td><td class="val-old">7B</td><td class="val-new">56B</td></tr>
+      <tr><td>Active params/token</td><td class="val-old">7B (100%)</td><td class="val-new">13B (23%)</td></tr>
+      <tr><td>VRAM for inference</td><td class="val-old">~14 GB (fp16)</td><td class="val-new">~90 GB (all experts loaded)</td></tr>
+      <tr><td>Training cost</td><td class="val-old">1×</td><td class="val-new">~1.5-2× (due to load-balance loss)</td></tr>
+      <tr><td>Inference FLOPs/token</td><td class="val-old">~14 GFLOPs</td><td class="val-new">~26 GFLOPs (2 experts)</td></tr>
+      <tr><td>Quality at same compute</td><td class="val-old">Baseline</td><td class="val-new">+15-25% better</td></tr>
+    </table>
+
+    <div class="when-to-use">
+      <div class="wtu-box wtu-old">
+        <div class="wtu-title">Use Dense When</div>
+        <ul>
+          <li>Serving on consumer GPUs (&lt;24GB VRAM)</li>
+          <li>Fine-tuning — MoE fine-tuning is harder</li>
+          <li>Latency is critical (fewer memory reads)</li>
+          <li>Deploying quantised models locally</li>
+        </ul>
+      </div>
+      <div class="wtu-box wtu-new">
+        <div class="wtu-title">Use MoE When</div>
+        <ul>
+          <li>High-quality inference at data-center scale</li>
+          <li>Multi-GPU cluster with NVLink available</li>
+          <li>Mixture of domains (code + math + language)</li>
+          <li>Cost-per-quality ratio is the priority</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> MoE wins on quality-per-FLOP for large-scale serving. Dense wins for local deployment and fine-tuning workflows where VRAM loading all experts is prohibitive.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Dense models use all parameters for every token — expensive to scale. MoE uses only 2 of 8 expert FFNs per token — 8× the parameters at only 2× the compute cost. The trade-off: you still load all experts into VRAM, so inference memory is much higher. Best for data-centre serving; not for consumer GPU deployment.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 2: Quadratic Attention vs SSMs -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">2</div>
+    <div><div class="bh-title">Quadratic Attention vs State Space Models (Mamba / RWKV)</div><div class="bh-sub">Sequence length scalability</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Transformer Attention O(n²)</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Mamba / RWKV O(n)</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional</div>
+        <div class="cmp-title cmp-title-old">Scaled Dot-Product Attention</div>
+        <div class="cmp-body">
+          Every token attends to every other token. Attention matrix is n×n — quadratic memory and compute with sequence length.
+          <ul>
+            <li>1K tokens → 1M attention entries</li>
+            <li>32K tokens → 1B attention entries (1 GB fp32)</li>
+            <li>128K tokens → OOM on most consumer GPUs</li>
+            <li>Prefill latency scales as O(n²)</li>
+            <li>KV cache scales as O(n) per layer</li>
+          </ul>
+          <div class="cmp-diagram">Attention(Q,K,V) = softmax(QKᵀ / √d_k) · V
+Matrix QKᵀ ∈ R^{n×n}   ← n² memory
+n=1K  → 4MB  (manageable)
+n=32K → 4GB  (tight)
+n=128K→ 64GB (impossible w/o FlashAttn)</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern</div>
+        <div class="cmp-title cmp-title-new">Mamba Selective SSM</div>
+        <div class="cmp-body">
+          Compresses sequence history into a fixed-size hidden state h. State update is O(1) per token — true linear complexity.
+          <ul>
+            <li>128K tokens → same cost as 1K tokens per step</li>
+            <li>State size is constant regardless of sequence length</li>
+            <li>Selective: Δ, B, C depend on input (content-aware)</li>
+            <li>Inference: O(1) recurrent update per token</li>
+            <li>Training: O(n log n) via parallel scan</li>
+          </ul>
+          <div class="cmp-diagram">SSM: h_t = Ā h_{t-1} + B̄ x_t     [O(d_state) memory]
+      y_t = C h_t + D x_t
+Selective Mamba: Δ,B,C = f(x_t) — input-dependent
+                 Ā = exp(Δ A)
+Inference: constant state, O(1) per token step</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Transformer Attention</th><th class="val-new">Mamba SSM</th></tr>
+      <tr><td>Time complexity (prefill)</td><td class="val-old">O(n²·d)</td><td class="val-new">O(n·d_state)</td></tr>
+      <tr><td>Memory (KV/state)</td><td class="val-old">O(n·d) KV cache</td><td class="val-new">O(d_state) fixed</td></tr>
+      <tr><td>Short-context quality</td><td class="val-old">Excellent</td><td class="val-new">Comparable</td></tr>
+      <tr><td>Long-context recall</td><td class="val-old">Perfect (full attention)</td><td class="val-new">Degrades (state compression)</td></tr>
+      <tr><td>Throughput at 128K ctx</td><td class="val-old">Very slow / OOM</td><td class="val-new">Linear — fast</td></tr>
+      <tr><td>Exact lookup tasks</td><td class="val-old">Reliable</td><td class="val-new">Can miss (compressed)</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> SSMs are transformative for long-context streaming tasks (audio, genomics, real-time data). Transformers remain superior for tasks needing precise recall of arbitrary past tokens. Hybrid architectures (Jamba, Zamba) combine both: SSM layers for efficiency + attention layers for recall.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Transformers remember everything perfectly but memory cost is quadratic — 32K tokens means a billion entries in the attention matrix. Mamba compresses all history into a constant-size state — memory never grows. Trade-off: SSMs may "forget" specific details from very long histories. Use transformers when you need precise long-range recall; use SSMs for streaming or long-context throughput.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 3: Dense Transformer vs MoR -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">3</div>
+    <div><div class="bh-title">Fixed Depth Transformer vs Mixture of Recursions (MoR)</div><div class="bh-sub">Adaptive compute allocation per token</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Fixed L layers per token</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Dynamic depth with weight sharing</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional</div>
+        <div class="cmp-title cmp-title-old">Fixed-Depth Transformer</div>
+        <div class="cmp-body">
+          Every token processes through exactly L layers regardless of token complexity. A space character gets the same compute as a complex reasoning step.
+          <ul>
+            <li>All tokens: 32 layers (e.g. Llama-3 8B)</li>
+            <li>"The" gets same FLOPs as "integrate(e^x²dx)"</li>
+            <li>Waste: simple tokens over-processed</li>
+            <li>Limitation: hard tokens under-processed</li>
+            <li>Scale = more layers for ALL tokens</li>
+          </ul>
+          <div class="cmp-diagram">Token₁ ("the")     → L1 → L2 → ... → L32 → output
+Token₂ ("compute") → L1 → L2 → ... → L32 → output
+Token₃ (";")        → L1 → L2 → ... → L32 → output
+Every token: same 32-layer path regardless of complexity</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern</div>
+        <div class="cmp-title cmp-title-new">Mixture of Recursions (MoR)</div>
+        <div class="cmp-body">
+          One shared layer block (weights) is applied recursively. A router decides how many passes each token needs — simple tokens exit early.
+          <ul>
+            <li>Single shared block, applied 1–R times per token</li>
+            <li>Router: "Does this token need another pass?"</li>
+            <li>Simple tokens: 1-2 passes; complex: up to R passes</li>
+            <li>Total params: same as 1 layer, total compute: variable</li>
+            <li>Memory: weight sharing = tiny model footprint</li>
+          </ul>
+          <div class="cmp-diagram">SharedBlock (weights reused each recursion):
+  Token₁ ("the")     → [Block]¹ → exit (simple)
+  Token₂ ("compute") → [Block]¹ → [Block]² → [Block]³ → exit
+  Token₃ (";")        → [Block]¹ → exit
+
+Router: sigmoid(W_r · h_t) → continue or exit?
+Depth per token: adaptive [1..R], avg ≈ R/2</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Dense Transformer</th><th class="val-new">MoR (Mixture of Recursions)</th></tr>
+      <tr><td>Depth per token</td><td class="val-old">Fixed L layers</td><td class="val-new">Dynamic 1–R passes</td></tr>
+      <tr><td>Weight sharing</td><td class="val-old">None (L × unique weights)</td><td class="val-new">Full (1 shared block)</td></tr>
+      <tr><td>Model size (params)</td><td class="val-old">L × d²</td><td class="val-new">1 × d² (tiny footprint)</td></tr>
+      <tr><td>FLOPs per token</td><td class="val-old">Fixed (L × block)</td><td class="val-new">Variable (avg R/2 × block)</td></tr>
+      <tr><td>Hardware utilisation</td><td class="val-old">Predictable</td><td class="val-new">Variable (batching challenge)</td></tr>
+      <tr><td>Model availability (2025)</td><td class="val-old">Ubiquitous</td><td class="val-new">Research only</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> MoR is architecturally elegant — minimal parameters, adaptive compute. Still research-stage in 2025 with no production models. The key challenge is batching tokens with different depths on GPU. Watch for MoR × MoE hybrids combining expert routing with recursive depth.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Standard transformers waste compute: a punctuation mark gets the same 32 layers of processing as a complex mathematical symbol. MoR lets simple tokens exit early and complex tokens recurse deeper — using the same shared weights. Elegantly efficient in theory, but still research-only in 2025 with no production models available.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 4: Standard Generation vs Speculative Decoding -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">4</div>
+    <div><div class="bh-title">Autoregressive Decoding vs Speculative Decoding</div><div class="bh-sub">Inference speed without quality loss</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">1 token per forward pass</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Draft k tokens, verify in parallel</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional</div>
+        <div class="cmp-title cmp-title-old">Autoregressive Decoding</div>
+        <div class="cmp-body">
+          The target model generates one token per forward pass. Each pass is sequential — cannot be parallelised. Latency scales linearly with output length.
+          <ul>
+            <li>Target model (70B): 1 pass → 1 token</li>
+            <li>100 tokens → 100 serial forward passes</li>
+            <li>GPU utilisation often low (memory-bandwidth bound)</li>
+            <li>Latency ∝ output_length × model_size</li>
+          </ul>
+          <div class="cmp-diagram">Prompt: "The capital of France is"
+T=1: model(prompt) → "Paris"
+T=2: model(prompt+"Paris") → " and"
+T=3: model(prompt+"Paris and") → " the"
+T=4: model(prompt+"Paris and the") → " most"
+... 100 serial passes for 100 tokens</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern</div>
+        <div class="cmp-title cmp-title-new">Speculative Decoding</div>
+        <div class="cmp-body">
+          Small fast "draft" model generates k tokens. Large target model verifies all k in a single batched pass — rejected tokens are corrected, accepted tokens are free.
+          <ul>
+            <li>Draft model (7B): generates k=5 tokens quickly</li>
+            <li>Target model (70B): verifies all 5 in 1 pass</li>
+            <li>If 4/5 accepted → 4 tokens in cost of ~1.2 passes</li>
+            <li>Typical speedup: 2-3× at same output quality</li>
+            <li>Zero quality loss — target model distribution preserved</li>
+          </ul>
+          <div class="cmp-diagram">Draft (7B, fast):  "Paris" "and" "the" "Eiffel" "Tower"
+Target (70B, 1 pass): verify all 5 tokens in parallel
+  Token 1 "Paris"  → P_target ≥ P_draft → ACCEPT ✓
+  Token 2 "and"    → P_target ≥ P_draft → ACCEPT ✓
+  Token 3 "the"    → P_target ≥ P_draft → ACCEPT ✓
+  Token 4 "Eiffel" → P_target ≥ P_draft → ACCEPT ✓
+  Token 5 "Tower"  → P_target  < P_draft → REJECT, resample
+Result: 4 free tokens + 1 corrected = 5 tokens, cost ≈ 1.2 passes</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Autoregressive</th><th class="val-new">Speculative Decoding</th></tr>
+      <tr><td>Tokens per pass</td><td class="val-old">1</td><td class="val-new">k (typically 4-6)</td></tr>
+      <tr><td>Output quality</td><td class="val-old">Reference</td><td class="val-new">Identical (provably)</td></tr>
+      <tr><td>Latency speedup</td><td class="val-old">1×</td><td class="val-new">2-3× (high acceptance)</td></tr>
+      <tr><td>Extra VRAM needed</td><td class="val-old">None</td><td class="val-new">Draft model overhead</td></tr>
+      <tr><td>Batch inference</td><td class="val-old">Good</td><td class="val-new">Complex (variable accept rates)</td></tr>
+      <tr><td>Cold / OOD prompts</td><td class="val-old">Normal speed</td><td class="val-new">Can be slower (low acceptance)</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> Speculative decoding is a free lunch for latency-critical serving when draft and target model share the same domain/distribution. Gemini, Claude, and GPT deployments all use variants of this. Struggle: batched inference at scale, because different sequences have different acceptance rates.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Normal decoding: 1 forward pass → 1 token. Speculative decoding: a small fast model drafts 5 tokens, the big model verifies all 5 in 1 pass. If 4 are accepted, you got 4 tokens for the cost of ~1.2 passes — mathematically identical quality at 2–3× the speed. The catch: only works well when the draft and target models share the same domain.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 5: Standard LLM vs Reasoning Models -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">5</div>
+    <div><div class="bh-title">Single-Pass LLM vs Reasoning Models (Test-Time Compute)</div><div class="bh-sub">Thinking before answering</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Prompt → answer in one pass</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Prompt → think chain → answer</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional</div>
+        <div class="cmp-title cmp-title-old">Standard Instruction-Tuned LLM</div>
+        <div class="cmp-body">
+          Model maps prompt directly to answer. "Reasoning" happens implicitly in the forward pass weights. No explicit search, backtracking, or self-verification.
+          <ul>
+            <li>GPT-4 (non-o1): prompt → answer immediately</li>
+            <li>Cannot recover from a bad first step</li>
+            <li>Chain-of-thought helps but is not systematic</li>
+            <li>More parameters → better reasoning (scaling law)</li>
+            <li>Fixed compute regardless of problem difficulty</li>
+          </ul>
+          <div class="cmp-diagram">Input: "Prove that √2 is irrational"
+Model: [one forward pass]
+Output: "Assume √2 = p/q... therefore irrational."
+Time: ~0.5s  |  Tokens: ~200  |  No self-check</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern</div>
+        <div class="cmp-title cmp-title-new">Reasoning Model (o1/o3/R1/QwQ)</div>
+        <div class="cmp-body">
+          Model generates a long chain-of-thought "thinking" block before the answer. Trained with RL to search, verify, and backtrack. More compute = better answer.
+          <ul>
+            <li>o3-mini: reasoning_effort low/med/high</li>
+            <li>Claude 3.7: budget_tokens up to 100K</li>
+            <li>DeepSeek-R1: open-source, full thinking trace</li>
+            <li>Test-time compute scales as a new dimension</li>
+            <li>Solves AMC/AIME/Olympiad problems</li>
+          </ul>
+          <div class="cmp-diagram">Input: "Prove that √2 is irrational"
+&lt;thinking&gt;
+  Let me assume √2 = p/q in lowest terms...
+  Then 2q² = p², so p² is even, so p is even...
+  Write p = 2k, then 2q² = 4k², q² = 2k²...
+  So q is also even — contradiction with lowest terms.
+  Wait, should I also show the general case? Let me verify...
+&lt;/thinking&gt;
+Output: Clean proof
+Time: 15-60s  |  Think tokens: 2000-50000</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Task</th><th class="val-old">GPT-4 Turbo</th><th class="val-new">o3 (high)</th></tr>
+      <tr><td>AIME 2024 math</td><td class="val-old">13%</td><td class="val-new">96%</td></tr>
+      <tr><td>SWE-bench coding</td><td class="val-old">7%</td><td class="val-new">49%</td></tr>
+      <tr><td>PhD-level science (GPQA)</td><td class="val-old">36%</td><td class="val-new">87%</td></tr>
+      <tr><td>Response latency</td><td class="val-old">0.5-2s</td><td class="val-new">10-120s</td></tr>
+      <tr><td>Cost per query</td><td class="val-old">$0.01</td><td class="val-new">$0.20-$2.00</td></tr>
+      <tr><td>Simple Q&amp;A tasks</td><td class="val-old">Excellent value</td><td class="val-new">Overkill</td></tr>
+    </table>
+
+    <div class="when-to-use">
+      <div class="wtu-box wtu-old">
+        <div class="wtu-title">Use Standard LLM When</div>
+        <ul>
+          <li>Summarisation, classification, extraction</li>
+          <li>Conversational chat, customer support</li>
+          <li>Low-latency requirements (&lt;2s)</li>
+          <li>High-volume, cost-sensitive workloads</li>
+        </ul>
+      </div>
+      <div class="wtu-box wtu-new">
+        <div class="wtu-title">Use Reasoning Models When</div>
+        <ul>
+          <li>Complex math / proof / algorithm design</li>
+          <li>Multi-step code generation (SWE tasks)</li>
+          <li>Scientific research, data analysis</li>
+          <li>High-stakes decisions where quality &gt; cost</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> Reasoning models are a paradigm shift — they move intelligence from training-time scale to inference-time search. For hard problems, they're worth the cost. For everyday tasks, standard models remain better value by 10-100×.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Standard models are fast and cheap — right tool for summarisation, Q&A, and classification. Reasoning models spend 10–120 seconds generating an internal thinking chain before answering — overkill for simple tasks but transformative for math, complex code, and science (o3 scores 96% on AIME vs GPT-4's 13%). Pick based on task complexity.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 6: Naive RAG vs Advanced RAG -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">6</div>
+    <div><div class="bh-title">Naive RAG vs Advanced RAG</div><div class="bh-sub">Retrieval quality evolution</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Fixed chunks + cosine similarity</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Hybrid retrieval + reranking + query expansion</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Naive RAG (2023)</div>
+        <div class="cmp-title cmp-title-old">Fixed Chunk Embedding Search</div>
+        <div class="cmp-body">
+          Split document into 512-token chunks. Embed all chunks. At query time, embed query, find top-k by cosine similarity, stuff into prompt.
+          <ul>
+            <li>Chunks split mid-sentence → broken context</li>
+            <li>Semantic search misses keyword matches</li>
+            <li>No query expansion for ambiguous questions</li>
+            <li>Top-k by similarity ≠ most relevant</li>
+            <li>"Lost in the middle" — LLM ignores middle docs</li>
+          </ul>
+          <div class="cmp-diagram">Docs → fixed 512-token chunks → embeddings → vector store
+Query → embed → cosine top-5 → stuff into prompt → LLM</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Advanced RAG (2024–25)</div>
+        <div class="cmp-title cmp-title-new">Hybrid + Rerank + Multi-Query</div>
+        <div class="cmp-body">
+          Semantic + keyword (BM25) hybrid retrieval. Query expansion generates multiple sub-queries. Reranker re-scores candidates. Contextual chunking preserves meaning.
+          <ul>
+            <li>Semantic + BM25 → both fuzzy and exact matches</li>
+            <li>HyDE: generate hypothetical answer, embed that</li>
+            <li>Multi-query: expand "X" to 3 sub-questions</li>
+            <li>Cross-encoder reranker rescores top-50 → top-5</li>
+            <li>Parent-child chunking: retrieve child, return parent</li>
+          </ul>
+          <div class="cmp-diagram">Docs → contextual chunks + summaries → vector + BM25 index
+Query → LLM expands to 3 sub-queries
+All sub-queries → hybrid retrieve top-50 → deduplicate
+Top-50 → cross-encoder reranker → top-5
+Top-5 + query → LLM answer + citations</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Technique</th><th class="val-old">Naive RAG</th><th class="val-new">Advanced RAG</th></tr>
+      <tr><td>Faithfulness (no hallucination)</td><td class="val-old">60-70%</td><td class="val-new">85-92%</td></tr>
+      <tr><td>Answer relevance</td><td class="val-old">55-65%</td><td class="val-new">80-90%</td></tr>
+      <tr><td>Latency</td><td class="val-old">0.5-1s retrieval</td><td class="val-new">1-3s (reranker adds ~0.5s)</td></tr>
+      <tr><td>Infra complexity</td><td class="val-old">Just vector store</td><td class="val-new">Vector + BM25 + reranker</td></tr>
+      <tr><td>Handles typos/abbreviations</td><td class="val-old">Poor</td><td class="val-new">Good (BM25 handles)</td></tr>
+      <tr><td>Cross-document reasoning</td><td class="val-old">Poor</td><td class="val-new">Good (graph RAG / fusion)</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> For production RAG, always add BM25 hybrid and a cross-encoder reranker — both are easy to add and produce 15-25% quality improvement. Query expansion helps on ambiguous short queries. GraphRAG adds another 10-20% on multi-hop questions.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Naive RAG: embed chunks, find closest by cosine, pass to LLM. Advanced RAG adds three things: BM25 keyword matching alongside semantic search (catches exact-match queries), query expansion to handle ambiguous questions, and a cross-encoder reranker to rescore the top 50 candidates. These additions give 15–25% quality improvement at modest latency cost.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 7: Full Fine-tuning vs LoRA/QLoRA -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">7</div>
+    <div><div class="bh-title">Full Fine-tuning vs LoRA / QLoRA</div><div class="bh-sub">Efficient adaptation of large models</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Update all 7B parameters</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Update 0.1% with low-rank adapters</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional</div>
+        <div class="cmp-title cmp-title-old">Full Fine-Tuning</div>
+        <div class="cmp-body">
+          Every weight in the model is updated during training. Requires storing all gradients and optimiser states — 3-4× model size in VRAM.
+          <ul>
+            <li>7B model: ~28 GB weights + ~112 GB gradients+Adam</li>
+            <li>Requires A100 80GB or multi-GPU cluster</li>
+            <li>Risk of catastrophic forgetting</li>
+            <li>A separate checkpoint per fine-tuned use case</li>
+            <li>Merge/serve = deploy entire new model</li>
+          </ul>
+          <div class="cmp-diagram">7B model: 7,000,000,000 trainable parameters
+VRAM = 14 GB (fp16 weights)
+     + 28 GB (fp16 gradients)
+     + 56 GB (Adam states: m, v per param)
+     = ~98 GB minimum  → 8× A100 needed</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern</div>
+        <div class="cmp-title cmp-title-new">QLoRA (4-bit + LoRA)</div>
+        <div class="cmp-body">
+          Base model quantised to 4-bit (frozen). Tiny low-rank adapter matrices (A, B) are trained in fp16. Only adapter weights have gradients.
+          <ul>
+            <li>7B model: ~4 GB (4-bit NF4) + ~20-40 MB adapters</li>
+            <li>Trainable on a single 16GB RTX 4080!</li>
+            <li>Base model preserved — swap adapters per task</li>
+            <li>LoRA rank r=16 → 0.05% of total params trained</li>
+            <li>Near full fine-tune quality on domain adaptation</li>
+          </ul>
+          <div class="cmp-diagram">W = W₀(frozen 4-bit) + α/r × (A · B)  [LoRA]
+                                 ↑ only A and B are trained
+A ∈ R^{d×r}, B ∈ R^{r×k}, r=16 (vs d=4096, k=4096)
+Trainable: 2 × 4096 × 16 = 131,072 params (per layer)
+vs Full FT: 4096 × 4096 = 16,777,216 params (per layer)
+Reduction: 128× fewer trainable params!</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Full Fine-Tuning</th><th class="val-new">QLoRA (r=16)</th></tr>
+      <tr><td>VRAM (7B model)</td><td class="val-old">~98 GB</td><td class="val-new">~10 GB</td></tr>
+      <tr><td>Trainable params</td><td class="val-old">7B (100%)</td><td class="val-new">~7M (0.1%)</td></tr>
+      <tr><td>Training time (1K examples)</td><td class="val-old">4-8 hours (8×A100)</td><td class="val-new">30-60 min (1×RTX 4090)</td></tr>
+      <tr><td>Quality vs full FT</td><td class="val-old">100% (reference)</td><td class="val-new">95-99%</td></tr>
+      <tr><td>Checkpoint size</td><td class="val-old">14 GB per model</td><td class="val-new">20-80 MB adapter</td></tr>
+      <tr><td>Catastrophic forgetting</td><td class="val-old">High risk</td><td class="val-new">Low (base frozen)</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> QLoRA democratised fine-tuning — anyone with a consumer GPU can adapt a 7B or even 13B model. Full fine-tuning is still preferred for instruction tuning from scratch and multi-task training where you need maximum capacity.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Full fine-tuning updates all 7B parameters and needs ~98GB VRAM — an 8-GPU cluster. QLoRA freezes the base model in 4-bit and trains only tiny adapter matrices (~20MB total) that fit in a single 16GB consumer GPU. Near-identical quality. Full fine-tuning is only worth the hardware cost when you need absolute maximum capacity.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 8: RLHF (PPO) vs DPO vs GRPO -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(250,204,21,.2);color:#facc15">8</div>
+    <div><div class="bh-title">RLHF (PPO) vs DPO vs GRPO / RLVR</div><div class="bh-sub">Alignment training evolution</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">PPO + reward model (2022)</span>
+      <span class="versus-mid">→</span>
+      <span class="versus-badge badge-new">DPO (2023) → GRPO / RLVR (2024)</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Generation 1 (2022)</div>
+        <div class="cmp-title cmp-title-old">RLHF with PPO</div>
+        <div class="cmp-body">
+          Four models in memory simultaneously: policy (LLM), reference policy, reward model, value model. Complex training loop with PPO clipping.
+          <ul>
+            <li>Requires human preference data → reward model training</li>
+            <li>4 model copies in VRAM during training</li>
+            <li>PPO is notoriously unstable (reward hacking)</li>
+            <li>Separate SFT → RM training → PPO training stages</li>
+            <li>Used by: InstructGPT, ChatGPT, original Claude</li>
+          </ul>
+          <div class="cmp-diagram">Stage 1: SFT — fine-tune on demonstrations
+Stage 2: RM — train reward model on (chosen, rejected) pairs
+         human rates: "response A better than B" × 10K+ examples
+Stage 3: PPO — RL loop:
+  policy_model.generate() → reward_model.score()
+  → PPO update (with KL penalty vs reference model)
+4 models in VRAM: policy + ref + reward + value</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Generation 2-3 (2023–24)</div>
+        <div class="cmp-title cmp-title-new">DPO → GRPO / RLVR</div>
+        <div class="cmp-body">
+          DPO eliminates the reward model — directly optimises preference pairs with a closed-form loss. GRPO groups multiple samples and uses relative reward, avoiding value model.
+          <ul>
+            <li>DPO: just policy + reference (2 models). Stable.</li>
+            <li>GRPO: generate G samples, score, normalise rewards</li>
+            <li>RLVR: verifiable rewards (math = checkable answer)</li>
+            <li>DeepSeek-R1 trained entirely with GRPO on math</li>
+            <li>No reward hacking — rewards are verifiable facts</li>
+          </ul>
+          <div class="cmp-diagram">DPO loss: -log σ(β·[log π_θ(y_w|x) - log π_ref(y_w|x)]
+                          - log π_θ(y_l|x) + log π_ref(y_l|x)])
+No reward model needed — just (chosen, rejected) pairs!
+
+GRPO: generate G=8 responses per prompt
+      rewards r₁..r₈ = verify(answer) → 0 or 1
+      advantage = (rᵢ - mean(r)) / std(r)
+      update policy to maximise advantage</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Method</th><th>Models in VRAM</th><th>Stability</th><th>Data needed</th><th>Best for</th></tr>
+      <tr><td>PPO (RLHF)</td><td class="val-old">4 (policy+ref+RM+value)</td><td class="val-old">Low (reward hack)</td><td class="val-old">Human rankings (expensive)</td><td class="val-old">General helpfulness</td></tr>
+      <tr><td>DPO</td><td class="val-new">2 (policy+ref)</td><td class="val-new">High (supervised)</td><td class="val-new">Preference pairs</td><td class="val-new">Style / safety alignment</td></tr>
+      <tr><td>GRPO / RLVR</td><td class="val-new">1-2 (policy+ref)</td><td class="val-new">Very high</td><td class="val-new">Problems with verifiable answers</td><td class="val-new">Math / code / reasoning</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> PPO is still used by frontier labs (GPT-4, Claude 3) for general alignment. DPO is the go-to for open-source fine-tuning. GRPO/RLVR is the breakthrough technique that created DeepSeek-R1's reasoning capability — works only when you can automatically verify answers.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> PPO-RLHF needs 4 models in VRAM simultaneously and is notoriously prone to reward hacking. DPO reformulates alignment as a simple supervised loss — just 2 models, stable, and widely used for open-source fine-tuning. GRPO uses verifiable rewards (correct math answer = +1, wrong = 0) — no reward model, no value model, created DeepSeek-R1. Use DPO for style/safety; GRPO when answers are checkable.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 9: Large Models vs SLMs -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(129,140,248,.2);color:#818cf8">9</div>
+    <div><div class="bh-title">Large Foundation Models vs Small Language Models (SLMs)</div><div class="bh-sub">The right-sizing revolution</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">GPT-4 class (100B+ params)</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">Phi-3.5 / Qwen2.5 / Llama-3.2 (1-4B)</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Traditional Assumption (2022)</div>
+        <div class="cmp-title cmp-title-old">Bigger is Always Better</div>
+        <div class="cmp-body">
+          GPT-3 showed scale = capability. The assumption: intelligent behaviour requires massive models. Small models can't follow instructions, reason, or be reliable.
+          <ul>
+            <li>GPT-3: 175B, needs 8× A100 to run</li>
+            <li>$0.02-0.06 per 1K tokens API cost</li>
+            <li>100-500ms latency per response</li>
+            <li>Cannot run on mobile / edge devices</li>
+            <li>Privacy concern — data leaves device/org</li>
+          </ul>
+          <div class="cmp-diagram">175B model:
+  VRAM: 350 GB (fp16) → 8× A100 80GB
+  Cost: $0.06/1K tokens (GPT-3.5 Turbo, 2022)
+  Speed: ~60 tokens/s on 8× A100
+  Mobile: impossible</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">Modern Reality (2024–25)</div>
+        <div class="cmp-title cmp-title-new">SLMs — Distilled, Curated, Efficient</div>
+        <div class="cmp-body">
+          Phi-3.5 Mini (3.8B) achieves GPT-3.5 level quality by training on extremely curated "textbook quality" data. Runs on phone. Quantised models on browser.
+          <ul>
+            <li>Phi-3.5 Mini (3.8B): GPT-3.5 level on many benchmarks</li>
+            <li>Llama-3.2-1B: runs on iPhone at 30 tok/s</li>
+            <li>SmolLM2-135M: runs in browser via Transformers.js</li>
+            <li>Qwen2.5-7B: best 7B model (multilingual + code)</li>
+            <li>On-device → zero latency, zero cost, full privacy</li>
+          </ul>
+          <div class="cmp-diagram">Phi-3.5 Mini (3.8B):
+  VRAM: 7.6 GB (fp16) → runs on RTX 4060 Ti 16GB
+  4-bit: 2.1 GB → runs on phones (iPhone 15 Pro)
+  Speed: 100+ tok/s on consumer GPU
+  Browser: SmolLM2-135M via Transformers.js CDN
+  Cost: $0 (local) or $0.0002/1K tokens (hosted)</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Use Case</th><th class="val-old">Large Model (GPT-4)</th><th class="val-new">SLM (Phi-3.5 / Llama-3.2)</th></tr>
+      <tr><td>Complex multi-step reasoning</td><td class="val-old">Excellent</td><td class="val-new">Good (with CoT prompting)</td></tr>
+      <tr><td>Text classification / extraction</td><td class="val-old">Great but expensive</td><td class="val-new">Comparable quality, 100× cheaper</td></tr>
+      <tr><td>On-device / offline inference</td><td class="val-old">Impossible</td><td class="val-new">Native (iOS, Android, browser)</td></tr>
+      <tr><td>Privacy-sensitive data</td><td class="val-old">Data leaves device</td><td class="val-new">On-device — never transmitted</td></tr>
+      <tr><td>Cost at 1M requests/day</td><td class="val-old">$600-6000/day</td><td class="val-new">$0-50/day (local) or $2/day (API)</td></tr>
+      <tr><td>Fine-tuning</td><td class="val-old">Expensive, API only</td><td class="val-new">QLoRA on consumer GPU in minutes</td></tr>
+    </table>
+
+    <div class="when-to-use">
+      <div class="wtu-box wtu-old">
+        <div class="wtu-title">Use Large Models When</div>
+        <ul>
+          <li>Novel reasoning / complex tasks</li>
+          <li>No domain-specific fine-tuning data</li>
+          <li>Broad general knowledge is required</li>
+          <li>Maximum quality, cost is secondary</li>
+        </ul>
+      </div>
+      <div class="wtu-box wtu-new">
+        <div class="wtu-title">Use SLMs When</div>
+        <ul>
+          <li>Task is well-defined (classify, extract, summarise)</li>
+          <li>Edge / mobile / offline deployment needed</li>
+          <li>Privacy requires on-device processing</li>
+          <li>High-volume, latency-critical workflows</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> The "bigger = better" assumption is dead for most production tasks. For classification, extraction, translation, and summarisation on focused domains, a fine-tuned 3B SLM beats GPT-4 in cost, latency, and privacy — often at comparable quality.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> The "bigger is always better" assumption is broken for most production tasks. A fine-tuned 3.8B SLM on your specific domain often matches GPT-4 in quality at 1/100th the cost, with 10× lower latency and zero data-privacy risk (runs on-device). Save large models for genuinely novel, complex, broad-knowledge tasks where no training data exists.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- COMPARISON 10: FlashAttention vs Standard Attention -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(6,182,212,.2);color:#06b6d4">10</div>
+    <div><div class="bh-title">Standard Attention vs FlashAttention / Sliding Window</div><div class="bh-sub">Memory-efficient attention implementations</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="versus-bar">
+      <span class="versus-badge badge-old">Full O(n²) attention matrix in HBM</span>
+      <span class="versus-mid">VS</span>
+      <span class="versus-badge badge-new">IO-aware tiling / local window</span>
+    </div>
+
+    <div class="cmp-block">
+      <div class="cmp-side cmp-old">
+        <div class="cmp-label cmp-label-old">Standard Attention</div>
+        <div class="cmp-title cmp-title-old">Full Materialised Attention Matrix</div>
+        <div class="cmp-body">
+          Computes and stores the full n×n attention matrix in GPU HBM (slow memory). Multiple reads/writes to HBM for softmax, dropout, masking.
+          <ul>
+            <li>Memory: O(n²) for attention matrix</li>
+            <li>Attention matrix stored in HBM (slow)</li>
+            <li>Multiple passes: QKᵀ, softmax, ×V, each one HBM r/w</li>
+            <li>Context limit: 2K-4K tokens (2022)</li>
+            <li>Most time is memory bandwidth, not compute</li>
+          </ul>
+          <div class="cmp-diagram">HBM (slow, 900 GB/s):
+  Write: QKᵀ matrix  (n×n floats)  ← bottleneck
+  Read:  for softmax normalization
+  Write: softmax(QKᵀ/√d) matrix
+  Read:  × V matrix
+  Write: output
+SRAM (fast, 19 TB/s): only small register operations</div>
+        </div>
+      </div>
+      <div class="cmp-side cmp-new">
+        <div class="cmp-label cmp-label-new">FlashAttention 2/3</div>
+        <div class="cmp-title cmp-title-new">Tiled IO-Aware Attention</div>
+        <div class="cmp-body">
+          Divides Q, K, V into blocks. Computes attention tile-by-tile entirely in fast SRAM. Never materialises the full n×n matrix in HBM.
+          <ul>
+            <li>Memory: O(n) — only output is stored in HBM</li>
+            <li>Tiling: process blocks entirely in SRAM (fast)</li>
+            <li>Online softmax: maintains running max/sum</li>
+            <li>2-4× faster than standard PyTorch attention</li>
+            <li>Enables 32K-128K context without OOM</li>
+          </ul>
+          <div class="cmp-diagram">SRAM (fast, tile-level only):
+  Load tile Q_i, K_j, V_j → compute partial attention
+  Update running softmax stats (online algorithm)
+  Accumulate output O_i incrementally
+HBM reads: O(n·d)  ← just the matrices, not n×n matrix
+HBM writes: O(n·d) ← just the final output
+Memory: O(n) vs O(n²) — 16K ctx = 1000× less HBM traffic!</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="metric-table">
+      <tr><th>Metric</th><th class="val-old">Standard Attention</th><th class="val-new">FlashAttention 2</th></tr>
+      <tr><td>HBM memory (n=16K)</td><td class="val-old">~8 GB (n² matrix)</td><td class="val-new">~128 MB (linear)</td></tr>
+      <tr><td>Wall-clock speedup</td><td class="val-old">1×</td><td class="val-new">2-4× faster</td></tr>
+      <tr><td>Max context (A100 80GB)</td><td class="val-old">~4K tokens</td><td class="val-new">128K+ tokens</td></tr>
+      <tr><td>Numerically exact?</td><td class="val-old">Yes</td><td class="val-new">Yes (exact, not approximate)</td></tr>
+      <tr><td>Implementation complexity</td><td class="val-old">Simple</td><td class="val-new">Complex CUDA kernels</td></tr>
+      <tr><td>Adopted by</td><td class="val-old">PyTorch naive impl.</td><td class="val-new">PyTorch SDPA, all frontier models</td></tr>
+    </table>
+
+    <div class="cmp-verdict"><strong>Bottom line:</strong> FlashAttention is now the default in all serious LLM training/inference stacks (vLLM, TGI, llama.cpp). It produces mathematically identical results to standard attention but 2-4× faster with 64-1000× less HBM memory. Use <code>torch.nn.functional.scaled_dot_product_attention</code> — it auto-selects FlashAttention when available.</div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> FlashAttention does not change what attention computes — it changes where the computation happens. By tiling and keeping intermediate values in fast SRAM instead of writing them to slow HBM, it achieves the same result 2–4× faster with 64–1000× less memory traffic at long contexts. It is a free performance upgrade — just use PyTorch's built-in scaled_dot_product_attention.</div>
+  </div>
+</div>
+
+<!-- Summary Decision Tree -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">★</div>
+    <div><div class="bh-title">Quick-Reference Decision Guide</div><div class="bh-sub">Which approach to pick for each scenario</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre style="font-size:12px;line-height:1.7">
+WHAT IS YOUR PRIMARY CONSTRAINT?
+│
+├── Cost / latency is critical (high-volume, real-time)
+│   ├── Task is well-defined (classify/extract/summarise)  → Fine-tuned SLM (3-7B) + QLoRA
+│   ├── Need long context (&gt;32K tokens)                    → Mamba hybrid (SSM) or FlashAttention
+│   └── Inference-time speed                               → Speculative Decoding (2-3× speedup)
+│
+├── Quality is the priority (complex reasoning, research)
+│   ├── Math / code / verifiable problems                  → Reasoning model (o3, DeepSeek-R1)
+│   ├── Multi-domain, broad knowledge needed               → Large model (GPT-4o, Claude 3.5 Sonnet)
+│   └── Knowledge base / document Q&A                     → Advanced RAG (hybrid + reranker)
+│
+├── Scale / parameter efficiency
+│   ├── Want more capacity without more compute            → MoE (Mixtral, DeepSeek)
+│   ├── Adaptive per-token compute (research)              → MoR (future)
+│   └── Alignment / instruction tuning on budget          → DPO or GRPO (if verifiable)
+│
+└── Deployment constraint
+    ├── On-device (mobile, browser, offline)               → SLM + Transformers.js / llama.cpp
+    ├── Privacy (data cannot leave device)                 → Local SLM (Phi-3.5, Llama-3.2)
+    └── Fine-tune on limited GPU (&lt;16GB)                  → QLoRA (4-bit + adapters)
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Use this tree whenever you are choosing an approach: high-volume + well-defined task → fine-tuned SLM; needs external or current knowledge → RAG; needs hard reasoning (math/code) → reasoning model; need more capacity without more compute → MoE; inference speed is the bottleneck → speculative decoding or FlashAttention. No single approach wins across all dimensions.</div>
+    <div style="background:rgba(250,204,21,.07);border:1px solid rgba(250,204,21,.3);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:12px;color:#94a3b8">
+      <span style="font-weight:700;color:#facc15">→ Cross-reference:</span> This module shows you the contrast. <a href="trends.html" style="color:#facc15">Module 8 · Trends</a> explains each modern technique in full depth — MoE routing, Mamba recurrence, reasoning model training (GRPO/RLVR), SLM design philosophy, and FlashAttention internals.
+    </div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 9 of 12 — ← <a href="trends.html" style="color:#818cf8">Module 8 · Trends</a> | <a href="when-to-use.html" style="color:#22d3ee">Module 10 · When to Use What →</a></footer>
+</body>
+</html>

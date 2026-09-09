@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 1 — LLM Foundations</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html" class="active">1 · Foundations</a>
+  <a href="architecture.html">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API &amp; Prompts</a>
+  <a href="rag-langchain.html">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html">6 · Production</a>
+  <a href="open-source.html">7 · Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step active" style="color:#4f8ef7;border-color:#4f8ef7">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.35);color:#4f8ef7">Module 1 — Foundations</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">How LLMs Work &amp; Text Generation</h1>
+  <p>From statistical language models to deep neural networks — the conceptual foundation that every other module builds on.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- BLOCK 1: What is a Language Model -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">1</div>
+    <div><div class="bh-title">What is a Language Model?</div><div class="bh-sub">The probabilistic foundation</div></div>
+  </div>
+  <div class="block-body">
+    <p>A <strong>language model</strong> is a probability distribution over sequences of tokens. Given a sequence of words, it estimates how likely that sequence is to appear in natural language.</p>
+    <p>More practically: given the tokens so far, predict the most likely next token. Repeat until done. This single idea drives all LLM behaviour.</p>
+    <div class="diagram"><pre>
+Goal: P(w₁, w₂, w₃, ... wₙ)  — probability of a token sequence
+
+Using the chain rule:
+P(w₁...wₙ) = P(w₁) × P(w₂|w₁) × P(w₃|w₁,w₂) × ...
+
+Practical use:
+  Input:  "The capital of France is"
+  Model:  P("Paris" | "The capital of France is") ≈ 0.94
+           P("London" | "The capital of France is") ≈ 0.02
+           P("a" | "The capital of France is") ≈ 0.001
+  Output: "Paris" (highest probability)
+    </pre></div>
+    <p><strong>Historical evolution:</strong></p>
+    <ul class="body-list">
+      <li><strong>N-gram models (1990s–2000s):</strong> count how often word sequences appear in training data. Simple but can't capture long-range dependencies. P("Paris" | last 2 words).</li>
+      <li><strong>Neural language models (2003–2017):</strong> feed-forward networks over word embeddings. Better generalisation but still limited context window.</li>
+      <li><strong>RNN / LSTM (2013–2017):</strong> recurrent networks process sequences step-by-step, maintaining a hidden state. Can handle longer context but slow to train and prone to vanishing gradients.</li>
+      <li><strong>Transformer-based LLMs (2017–present):</strong> attention mechanism processes all tokens in parallel, captures long-range dependencies efficiently. GPT, BERT, T5, Llama, etc.</li>
+    </ul>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> An LLM is a very sophisticated next-word guesser. It reads your text and estimates which word is most likely next, based on everything it was trained on, then repeats that until you have a full answer. That one loop — repeated billions of times during training — is the entire foundation of all LLM behaviour.</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: Deep Learning Overview -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">2</div>
+    <div><div class="bh-title">Overview of Deep Learning</div><div class="bh-sub">The mechanics that power LLMs</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card blue">
+        <div class="mc-icon">🧠</div>
+        <div class="mc-title">Neuron</div>
+        <div class="mc-body">Takes inputs, multiplies by weights, adds bias, applies activation function. Output = activation(W·x + b)</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-icon">📐</div>
+        <div class="mc-title">Layer</div>
+        <div class="mc-body">A collection of neurons operating in parallel. Deep = many stacked layers. Each layer learns higher-level features.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-icon">🔥</div>
+        <div class="mc-title">Activation Function</div>
+        <div class="mc-body">Introduces non-linearity. Common: ReLU (max(0,x)), GELU (smooth ReLU used in Transformers), Sigmoid, Tanh.</div>
+      </div>
+    </div>
+    <p><strong>Training pipeline — input to output:</strong></p>
+    <div class="diagram"><pre>
+Training Data                 Labelled or self-supervised (next token prediction)
+      │
+      ▼
+  Forward Pass           Input → Layers → Prediction
+      │
+      ▼
+  Loss Function          Cross-entropy: how wrong is the prediction?
+      │                  L = -log P(correct_next_token)
+      ▼
+  Backward Pass          Backpropagation: compute ∂L/∂weights for each parameter
+      │
+      ▼
+  Optimiser (AdamW)      Adjust weights: w = w - lr × gradient
+      │
+      ▼
+  Repeat millions of     Model improves at predicting next tokens
+  batches/steps          over the training corpus
+    </pre></div>
+    <p><strong>Key concepts:</strong></p>
+    <ul class="body-list">
+      <li><strong>Parameters:</strong> all the weights in the network. GPT-4 has ~1 trillion. Llama-3-8B has 8 billion.</li>
+      <li><strong>Gradient descent:</strong> iteratively nudge weights in the direction that reduces loss.</li>
+      <li><strong>AdamW optimiser:</strong> adaptive learning rates per parameter + weight decay. Standard for LLMs.</li>
+      <li><strong>Batch size:</strong> number of examples processed before a weight update. Larger = more stable gradients but more memory.</li>
+      <li><strong>Learning rate:</strong> size of each weight update step. Too high → diverges. Too low → slow convergence. Warm-up + cosine decay schedule is standard.</li>
+      <li><strong>Overfitting:</strong> model memorises training data, fails on new data. Mitigated by dropout, weight decay, early stopping.</li>
+    </ul>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Think of deep learning as millions of adjustable dials. The model makes a wrong prediction and every dial nudges slightly in the right direction. After doing this on trillions of sentences, the dials are tuned well enough to write code, answer questions, and hold conversations.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: Training Process -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">3</div>
+    <div><div class="bh-title">LLM Training Process</div><div class="bh-sub">Pre-training → Instruction tuning → Alignment</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Stage 1: Pre-training (Self-supervised)
+  ┌────────────────────────────────────────────────────────────┐
+  │  Raw text corpus: web pages, books, code, Wikipedia, etc.  │
+  │  Task: predict next token for every position               │
+  │  Scale: trillions of tokens, weeks/months on 1000s of GPUs │
+  │  Output: a model with broad world knowledge                │
+  └────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+Stage 2: Instruction Fine-tuning (SFT)
+  ┌────────────────────────────────────────────────────────────┐
+  │  Dataset: (instruction, response) pairs                    │
+  │  Example: "Summarise this text" → "Here is the summary…"  │
+  │  Output: model that follows instructions                   │
+  └────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+Stage 3: Alignment (RLHF / DPO)
+  ┌────────────────────────────────────────────────────────────┐
+  │  Human feedback ranks model responses                      │
+  │  Reward model trained on preferences                       │
+  │  PPO (or DPO) fine-tunes model to produce preferred output │
+  │  Output: helpful, harmless, honest model                   │
+  └────────────────────────────────────────────────────────────┘
+    </pre></div>
+    <p>This three-stage pipeline explains why "ChatGPT" behaves differently from a raw GPT model — it has gone through stages 2 and 3. See <a href="open-source.html">Module 7</a> for implementation details of fine-tuning.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Stage 1 reads the whole internet for broad knowledge. Stage 2 shows the model good instruction-following examples. Stage 3 has humans rate responses to teach helpful, safe behaviour. ChatGPT is a GPT model that went through all three stages — raw GPT-3 did not.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: Text Generation -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">4</div>
+    <div><div class="bh-title">Understanding Text Generation</div><div class="bh-sub">How a model turns a prompt into output — token by token</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>Autoregressive generation:</strong> the model generates one token at a time. Each newly generated token is appended to the input and the model runs again. This continues until an end-of-sequence token is generated or <code>max_tokens</code> is reached.</p>
+    <div class="diagram"><pre>
+Step 1:   Input: [The] [capital] [of] [France] [is]
+          Model outputs probability distribution over 50,000 tokens
+          Top-5:  Paris=0.94  Lyon=0.02  a=0.01  the=0.01  Rome=0.001
+          Sample: "Paris"
+
+Step 2:   Input: [The] [capital] [of] [France] [is] [Paris]
+          Top-5:  .=0.61  ,=0.20  and=0.10 ...
+          Sample: "."
+
+Step 3:   Input: [The] ... [Paris] [.]
+          Model outputs &lt;EOS&gt; token → generation stops
+    </pre></div>
+
+    <p><strong>Sampling strategies — each changes the probability distribution:</strong></p>
+    <table class="data-table" style="margin:12px 0">
+      <thead><tr><th>Strategy</th><th>How it works</th><th>Best for</th><th>Risk</th></tr></thead>
+      <tbody>
+        <tr><td>Greedy</td><td>Always pick highest probability token</td><td>Factual Q&amp;A, short answers</td><td>Repetitive, boring output</td></tr>
+        <tr><td>Temperature</td><td>Divide logits by T before softmax. T&lt;1 = sharper (more certain). T&gt;1 = flatter (more random)</td><td>Creative writing (T=0.8–1.2)</td><td>T too high → incoherent</td></tr>
+        <tr><td>Top-k</td><td>Keep only top k tokens, re-normalise. k=50 is common</td><td>Balanced quality + diversity</td><td>Fixed k can be too broad or narrow depending on context</td></tr>
+        <tr><td>Top-p (nucleus)</td><td>Keep the smallest set of tokens whose cumulative probability ≥ p. p=0.9 is common</td><td>Most production uses</td><td>Very rare coherent tokens excluded near boundary</td></tr>
+        <tr><td>Beam search</td><td>Track B best partial sequences at each step. Return best complete sequence</td><td>Machine translation, summarisation</td><td>Computationally expensive. Often too generic</td></tr>
+      </tbody>
+    </table>
+
+    <div class="code-wrap">
+      <div class="code-hdr">Temperature &amp; Top-p effect on logits <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Softmax — pure JS (no dependencies)</span>
+<span class="kw">const</span> <span class="fn">softmax</span> = (logits) => {
+  <span class="kw">const</span> max  = Math.<span class="fn">max</span>(...logits);
+  <span class="kw">const</span> exps = logits.<span class="fn">map</span>(l => Math.<span class="fn">exp</span>(l - max));
+  <span class="kw">const</span> sum  = exps.<span class="fn">reduce</span>((a, b) => a + b, <span class="num">0</span>);
+  <span class="kw">return</span> exps.<span class="fn">map</span>(e => e / sum);
+};
+
+<span class="kw">const</span> logits = [<span class="num">3.0</span>, <span class="num">1.5</span>, <span class="num">0.5</span>, <span class="num">0.1</span>];  <span class="cm">// raw model output</span>
+
+<span class="cm">// Greedy: always pick index 0 (highest logit)</span>
+
+<span class="cm">// Temperature scaling</span>
+<span class="kw">const</span> temperature  = <span class="num">0.7</span>;
+<span class="kw">const</span> scaledProbs  = <span class="fn">softmax</span>(logits.<span class="fn">map</span>(l => l / temperature));
+<span class="cm">// Higher peaks — more confident choices</span>
+
+<span class="cm">// Top-p (nucleus sampling)</span>
+<span class="kw">const</span> probs      = <span class="fn">softmax</span>(logits);
+<span class="kw">const</span> sorted     = [...probs].<span class="fn">map</span>((p, i) => ({ p, i })).<span class="fn">sort</span>((a, b) => b.p - a.p);
+<span class="kw">let</span>   cumulative = <span class="num">0</span>;
+<span class="kw">const</span> nucleus    = sorted.<span class="fn">filter</span>(({ p }) => {
+  <span class="kw">const</span> include = cumulative < <span class="num">0.9</span>;
+  cumulative += p;
+  <span class="kw">return</span> include;
+});
+<span class="cm">// nucleus holds the token indices that form the top-90% probability mass</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Temperature is your creativity dial — low for factual, high for imaginative. Top-p stops it picking bizarre fringe words by capping choices to the top-90% probability bucket. Most production apps set temperature 0.2–0.5 for facts and 0.7–0.9 for creative tasks.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: Emergent Capabilities -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">5</div>
+    <div><div class="bh-title">Emergent Capabilities &amp; Scaling Laws</div><div class="bh-sub">Why bigger models behave qualitatively differently — and what you can and can't predict</div></div>
+  </div>
+  <div class="block-body">
+
+    <p><strong>Scaling laws (Kaplan et al., 2020):</strong> model performance (measured by cross-entropy loss on held-out text) improves as a smooth power law when you scale <em>parameters (N)</em>, <em>training tokens (D)</em>, or <em>compute (C = 6ND)</em>. The exponents are small (~0.07 for N), meaning you need ~10× more parameters for each 16% loss reduction — expensive, but predictable.</p>
+    <div class="diagram"><pre>
+Kaplan Scaling Law (OpenAI, 2020):
+  L(N) ≈ (N_c / N)^0.076    — loss improves with more parameters (fixed data)
+  L(D) ≈ (D_c / D)^0.095    — loss improves with more training tokens (fixed model)
+  L(C) ≈ (C_c / C)^0.050    — loss improves with more compute budget
+
+Chinchilla (Hoffmann et al., DeepMind 2022):
+  Optimal: N and D should scale equally  →  N_opt ∝ C^0.5,  D_opt ∝ C^0.5
+  Key finding: GPT-3 (175B params, 300B tokens) was *undertrained*
+  Chinchilla-optimal: ~70B params trained on ~1.4T tokens beats 175B on 300B tokens
+  Practical impact: Llama, Mistral, Phi models train smaller models on far more data
+    </pre></div>
+
+    <p><strong>Emergent abilities:</strong> while the loss curve is smooth, some task metrics exhibit sharp, discontinuous jumps at certain scale thresholds. These capabilities don't gradually improve — they appear suddenly.</p>
+    <div class="diagram"><pre>
+Capability                    Approximate Emergence Threshold
+─────────────────────────────────────────────────────────────────
+Multi-step arithmetic          ~7–13B params (with CoT prompting)
+Three-digit addition           ~1–7B params
+Chain-of-thought reasoning     ~62B+ raw; unlocked at smaller scale with prompting
+Code generation (functional)   ~7B+ with fine-tuning; ~70B+ zero-shot
+Instruction following          ~7B+ with SFT; ~70B+ raw
+In-context learning (few-shot) ~1B+ (simple); ~7B+ (complex tasks)
+Analogical reasoning           ~62B+
+Multi-hop reasoning            ~70B+
+Theory of mind (basic)         ~100B+
+
+Model size →  1B    7B       13B      70B     405B    ~1T (GPT-4 class)
+              │      │        │        │        │        │
+Basic Q&amp;A    ✅     ✅       ✅       ✅       ✅       ✅
+Arithmetic   ❌     ⚠️       ✅       ✅       ✅       ✅
+Code gen     ❌     ⚠️       ✅       ✅       ✅       ✅
+Multi-step   ❌     ❌       ⚠️       ✅       ✅       ✅
+  reasoning
+Complex inst ❌     ⚠️       ✅       ✅       ✅       ✅
+  following
+Theory of    ❌     ❌       ❌       ⚠️       ✅       ✅
+  mind
+
+Legend: ✅ works reliably  ⚠️ works partially / needs prompting  ❌ absent
+    </pre></div>
+
+    <p><strong>The 2022–2023 emergence debate:</strong> Schaeffer, Miranda &amp; Koyejo (2023) published a provocative paper arguing that emergent abilities are a <em>measurement artifact</em>, not a true property of neural networks. Their argument:</p>
+    <ul class="body-list">
+      <li><strong>Discontinuous metrics create false thresholds:</strong> metrics like "exact match" score 0 until the model gets the answer exactly right, then jump to 1.0. If the underlying capability grows smoothly but the metric is nonlinear, the metric will look discontinuous even though the model isn't.</li>
+      <li><strong>Smooth metrics show smooth improvement:</strong> when you use log-probability or soft metrics instead of exact-match, the same capabilities show gradual improvement — no sharp threshold visible.</li>
+      <li><strong>The counter-argument:</strong> Wei et al. (2022 original emergence paper) and subsequent work argue that certain reasoning tasks genuinely require a minimum parameter count to hold necessary intermediate representations — the capability truly isn't present until then, regardless of metric choice.</li>
+      <li><strong>Practical stance:</strong> both can be true simultaneously. Some apparent emergence is metric-driven; some represents genuine qualitative capability shifts. Don't assume a capability exists at small scale just because you used a softer metric.</li>
+    </ul>
+
+    <p><strong>Implications for capability prediction:</strong></p>
+    <ul class="body-list">
+      <li><strong>You cannot interpolate:</strong> if a 7B and 13B model both fail a task, you cannot reliably predict when a larger model will succeed. Emergence thresholds are not predictable from smaller-scale experiments.</li>
+      <li><strong>Benchmark saturation:</strong> once a model hits ~100% on a benchmark, the benchmark stops being informative. This happened with GSM8K (8th-grade math) — recent models max it out, masking differences between them. New, harder benchmarks (MATH, ARC-Challenge, GPQA) are needed constantly.</li>
+      <li><strong>Compute-optimal ≠ inference-optimal:</strong> Chinchilla-optimal training maximises performance per training FLOP. But for deployment, you often want a smaller model trained on far more tokens (like LLaMA-3-8B on 15T tokens) — cheaper to serve per query, even if not maximally accurate.</li>
+      <li><strong>Instruction tuning unlocks latent capability:</strong> a 7B model fine-tuned on high-quality instruction pairs can match a raw 70B model on specific tasks. The capability exists in the weights; the fine-tuning teaches the model to express it. This is why LLaMA-3-8B-Instruct outperforms raw LLaMA-3-70B on many benchmarks.</li>
+    </ul>
+
+    <div class="diagram"><pre>
+Compute budget decision tree:
+
+Do you need to serve this model at scale?
+├── Yes → train smaller, longer (Chinchilla-suboptimal, inference-optimal)
+│         Example: 7B on 2T tokens  vs  70B on 200B tokens — prefer 7B for low latency
+└── No  → train optimal (Chinchilla: scale N and D equally)
+
+Fine-tuning unlocks capability:
+  Raw 70B → 40% on instruction benchmark
+  Raw 7B  → 25% on same benchmark
+
+  Instruct-7B (SFT + RLHF) → 60–70% on same benchmark
+  Instruct-70B              → 85%+
+
+  → 7B-Instruct &gt; raw 70B  (tuning &gt; raw scale for task-specific performance)
+    </pre></div>
+
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Bigger models don't just get incrementally smarter — at certain size thresholds, abilities that were completely absent suddenly appear (multi-step math, code generation, analogical reasoning). But: (1) you can't predict when this threshold will hit, (2) sometimes the "sudden jump" is just a measurement illusion caused by using binary pass/fail metrics, and (3) a smaller model that's been carefully fine-tuned often beats a larger raw model at specific tasks. Scaling up is powerful, but it's not the only lever.</div>
+  </div>
+</div>
+
+</div><!-- /container -->
+</section>
+
+<hr class="div"/>
+
+<!-- EDGE CASES -->
+<section>
+<div class="container">
+  <div class="sec-title"><span>⚠️</span> Edge Cases &amp; Tricky Behaviours</div>
+  <div class="sec-sub">Common failure modes when using LLMs — know these before building anything</div>
+  <div class="edge-grid">
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">🌀</div><div class="edge-title">Hallucination</div><div class="edge-desc">Model generates confident-sounding but factually wrong content. Root cause: language models optimise for fluency, not factual accuracy.</div><div class="edge-fix">Use RAG (Module 4), ask model to cite sources, use low temperature for factual tasks.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">🔁</div><div class="edge-title">Repetition Loop</div><div class="edge-desc">Greedy decoding gets stuck: "the the the the…". Especially bad with very low temperature or when prompt format is unusual.</div><div class="edge-fix">Set repetition_penalty &gt; 1.0 or use top-p sampling.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">✂️</div><div class="edge-title">Truncation Mid-sentence</div><div class="edge-desc">max_tokens hit before generation completes — output cut off mid-thought.</div><div class="edge-fix">Increase max_tokens. Check response finish_reason == "length" to detect truncation.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">🌡️</div><div class="edge-title">Temperature = 0 is not Deterministic</div><div class="edge-desc">Even at temperature=0, floating point precision differences across hardware/versions can produce different tokens.</div><div class="edge-fix">Use seed parameter (OpenAI supports it). Treat temperature=0 as "near-deterministic", not guaranteed reproducible.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">📉</div><div class="edge-title">Probability Degradation</div><div class="edge-desc">As generation gets longer, probability of each token compounds. Very long outputs drift in quality. The model "forgets" the original instruction.</div><div class="edge-fix">Break long generation into sections. Re-inject instruction for each section.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">🧮</div><div class="edge-title">Poor Arithmetic</div><div class="edge-desc">LLMs predict tokens — they don't compute. "What is 17 × 43?" can be wrong because the answer requires calculation, not pattern matching.</div><div class="edge-fix">Use tool calling to hand off math to a code interpreter (Module 5).</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">📅</div><div class="edge-title">Knowledge Cutoff</div><div class="edge-desc">Model training data ends at a specific date. Events after that date are unknown. Model may confidently answer with outdated information.</div><div class="edge-fix">Use RAG to inject current data (Module 4). Include current date in system prompt.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-l">LOW</div><div class="edge-icon">🎭</div><div class="edge-title">Sycophancy</div><div class="edge-desc">RLHF-trained models may agree with user corrections even when the user is wrong, to avoid conflict.</div><div class="edge-fix">Prompt explicitly: "Do not change your answer based on my follow-up if you are confident."</div></div>
+  </div>
+</div>
+</section>
+
+<footer>Module 1 of 12 — ← <a href="how-llm-works.html">Module 0 · How LLMs Work</a> | <a href="architecture.html">Module 2 · Technical Architecture →</a></footer>
+</body>
+</html>

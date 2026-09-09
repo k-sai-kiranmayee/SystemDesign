@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RAG with PDF — Challenges, Solutions & End-to-End Flow</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #23273a;
+    --border: #2e3350;
+    --accent-blue: #4f8ef7;
+    --accent-green: #3ecf8e;
+    --accent-orange: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #a78bfa;
+    --accent-cyan: #22d3ee;
+    --accent-pink: #f472b6;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ─────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #1a1d27 0%, #0f1117 50%, #1a1d27 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 32px 40px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(79,142,247,.15);
+    border: 1px solid rgba(79,142,247,.4);
+    color: var(--accent-blue);
+    border-radius: 999px;
+    padding: 4px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(24px,4vw,44px);
+    font-weight: 800;
+    background: linear-gradient(90deg, #4f8ef7, #a78bfa, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .hero p {
+    color: var(--text-muted);
+    font-size: 16px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* ── LAYOUT ──────────────────────────────────────── */
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 56px 0 40px; }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title span.icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+  .section-subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+    padding-left: 34px;
+  }
+
+  /* ── FLOW DIAGRAM ────────────────────────────────── */
+  .flow-wrapper {
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 1200px;
+    position: relative;
+  }
+
+  .flow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .flow-block {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 14px 16px;
+    width: 148px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .flow-block .fb-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .flow-block .fb-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .flow-block .fb-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .flow-block.blue  { border-color: rgba(79,142,247,.5);  background: rgba(79,142,247,.08); }
+  .flow-block.green { border-color: rgba(62,207,142,.5);  background: rgba(62,207,142,.08); }
+  .flow-block.orange{ border-color: rgba(245,158,11,.5);  background: rgba(245,158,11,.08); }
+  .flow-block.purple{ border-color: rgba(167,139,250,.5); background: rgba(167,139,250,.08);}
+  .flow-block.cyan  { border-color: rgba(34,211,238,.5);  background: rgba(34,211,238,.08); }
+  .flow-block.pink  { border-color: rgba(244,114,182,.5); background: rgba(244,114,182,.08);}
+  .flow-block.red   { border-color: rgba(239,68,68,.5);   background: rgba(239,68,68,.08);  }
+
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    color: var(--text-dim);
+    font-size: 20px;
+    flex-shrink: 0;
+    align-self: center;
+    margin-top: -8px;
+  }
+  .flow-arrow-down {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1;
+    padding: 3px 0;
+  }
+
+  /* sub-blocks inside a flow block */
+  .sub-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .sub-block {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .sub-block strong { color: var(--text); font-size: 10px; }
+
+  /* ── CHALLENGE GRID ──────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  @media(max-width:900px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+  }
+  .card.blue::before   { background: var(--accent-blue); }
+  .card.green::before  { background: var(--accent-green); }
+  .card.orange::before { background: var(--accent-orange); }
+  .card.purple::before { background: var(--accent-purple); }
+  .card.cyan::before   { background: var(--accent-cyan); }
+  .card.pink::before   { background: var(--accent-pink); }
+  .card.red::before    { background: var(--accent-red); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .card-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .card-category {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-dim);
+  }
+
+  .issue-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .issue-list li {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .issue-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+    font-size: 11px;
+    top: 2px;
+  }
+  .issue-list li strong { color: var(--text); font-weight: 600; }
+  .issue-list li .tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .tag-edge { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+  .tag-rare { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+
+  /* ── COMPARE TABLE ───────────────────────────────── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .compare-table thead tr {
+    background: var(--surface2);
+  }
+  .compare-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: rgba(255,255,255,.02); }
+  .compare-table td:first-child { color: var(--text); font-weight: 600; }
+  .compare-table td .pill {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .pill-red    { background: rgba(239,68,68,.15);   color: #ef4444;   border: 1px solid rgba(239,68,68,.3); }
+  .pill-green  { background: rgba(62,207,142,.15);  color: #3ecf8e;   border: 1px solid rgba(62,207,142,.3); }
+  .pill-orange { background: rgba(245,158,11,.15);  color: #f59e0b;   border: 1px solid rgba(245,158,11,.3); }
+
+  /* ── EDGE CASES GRID ─────────────────────────────── */
+  .edge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .edge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .edge-card .edge-icon { font-size: 20px; margin-bottom: 6px; }
+  .edge-card .edge-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+  .edge-card .edge-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .edge-card .edge-severity {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .sev-high   { background: rgba(239,68,68,.15);  color: #ef4444; }
+  .sev-med    { background: rgba(245,158,11,.15); color: #f59e0b; }
+  .sev-low    { background: rgba(62,207,142,.15); color: #3ecf8e; }
+
+  /* ── DIVIDER ─────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 24px;
+  }
+
+  /* ── SOLUTION COMPARE ───────────────────────────── */
+  .sol-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media(max-width:760px){ .sol-grid { grid-template-columns: 1fr; } }
+  .sol-card {
+    border-radius: 10px;
+    padding: 18px 20px;
+    border: 1px solid;
+  }
+  .sol-card.problem {
+    border-color: rgba(239,68,68,.3);
+    background: rgba(239,68,68,.05);
+  }
+  .sol-card.solution {
+    border-color: rgba(62,207,142,.3);
+    background: rgba(62,207,142,.05);
+  }
+  .sol-card .sol-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .sol-card.problem .sol-label { color: #ef4444; }
+  .sol-card.solution .sol-label { color: #3ecf8e; }
+  .sol-card ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .sol-card ul li {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .sol-card ul li::before {
+    position: absolute; left: 0; top: 1px;
+    font-size: 11px;
+  }
+  .sol-card.problem ul li::before { content: '✗'; color: #ef4444; }
+  .sol-card.solution ul li::before { content: '✓'; color: #3ecf8e; }
+
+  /* ── WIDE FLOW TABLE ─────────────────────────────── */
+  .flow-stage {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .flow-stage-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .stage-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-stage-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+  @media(max-width:700px){ .flow-stage-body { grid-template-columns: 1fr; } }
+  .fsb-col {
+    padding: 14px 18px;
+    border-right: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .fsb-col:last-child { border-right: none; }
+  .fsb-col .fsb-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 8px;
+  }
+
+  /* ── FOOTER ──────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div style="background:rgba(239,68,68,.12);border-bottom:2px solid rgba(239,68,68,.4);padding:14px 24px;text-align:center;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;font-family:'Segoe UI',system-ui,sans-serif">
+  <span style="font-size:16px">⚠️</span>
+  <span style="font-size:14px;font-weight:700;color:#ef4444">DEPRECATED</span>
+  <span style="font-size:13px;color:#94a3b8">This is an older version of the PDF RAG guide and is no longer maintained.</span>
+  <a href="rag-pdf.html" style="background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.4);color:#22d3ee;padding:5px 16px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">→ Go to Current Version (Module 11)</a>
+</div>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<div class="hero">
+  <div class="hero-badge">Architecture Deep-Dive</div>
+  <h1>RAG with Multi-Modal PDFs<br/>Challenges, Solutions &amp; End-to-End Flow</h1>
+  <p>A comprehensive breakdown of every failure point in traditional RAG when processing PDFs containing text, tables, and images — plus the modern fixes for each.</p>
+</div>
+
+<!-- ═══════════════ END-TO-END FLOW (LINEAR) ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title"><span class="icon">🔄</span> End-to-End Pipeline Flow</div>
+    <div class="section-subtitle">Complete journey from raw PDF + user query to grounded final answer</div>
+
+    <!-- Stage rows -->
+
+    <!-- Stage 1 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(79,142,247,.2);color:#4f8ef7;">1</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">📥 User Input</div>
+          <div style="font-size:11px;color:var(--text-muted);">Entry point — PDF document &amp; natural language query</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">What happens</div>
+          User uploads a PDF (single or batch). Optionally provides metadata (domain, date, language). Submits a natural language query or question.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Inputs</div>
+          PDF file(s) · User query string · Optional: language hint, page range, document category
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Outputs / Next</div>
+          Validated PDF bytes + query string handed to the ingestion pipeline. Query sent separately to the retrieval pipeline.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 2 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(62,207,142,.2);color:#3ecf8e;">2</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">🔍 PDF Pre-Processing &amp; Classification</div>
+          <div style="font-size:11px;color:var(--text-muted);">Detect PDF type, language, structure before extraction</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">What happens</div>
+          Classify PDF: native-text vs scanned (image-only) vs hybrid. Detect document language. Check for encryption/DRM. Identify page count, orientation, multi-column layout.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Tools</div>
+          PyMuPDF (fitz) · pdfplumber · python-magic · langdetect · poppler · pdfminer.six
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Edge cases handled here</div>
+          Password-protected PDFs · corrupted files · zero-byte PDFs · PDFs embedded inside PDFs · right-to-left script detection
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 3 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(167,139,250,.2);color:#a78bfa;">3</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">📄 Multi-Modal Content Extraction</div>
+          <div style="font-size:11px;color:var(--text-muted);">Separate extraction paths for text, tables, and images</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Text path</div>
+          Native PDFs: direct text extraction preserving reading order. Scanned PDFs: OCR via Tesseract / AWS Textract / Azure DI. Post-process: remove headers/footers, fix hyphenation, normalize whitespace, handle footnotes.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#a78bfa;">Table path</div>
+          Detect tables (camelot, pdfplumber, tabula-py). Extract with structure preserved → convert to Markdown or HTML. Handle merged/spanning cells. Flag multi-page tables for re-assembly.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Image path</div>
+          Extract embedded images (PyMuPDF). Render each page as high-res image for layout understanding. Pass images to Vision LLM (GPT-4o / Claude) for captioning. Use CLIP for multi-modal embeddings.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 4 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(34,211,238,.2);color:#22d3ee;">4</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">✂️ Intelligent Chunking</div>
+          <div style="font-size:11px;color:var(--text-muted);">Content-type-aware chunking — not one-size-fits-all</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Text chunking</div>
+          Semantic chunking using sentence boundaries + embedding similarity. Hierarchical: document → section → paragraph. Overlap = 10–20% for context continuity. Max chunk ≈ 512 tokens. Attach page number + section heading as metadata.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#a78bfa;">Table chunking</div>
+          Each table is a single atomic chunk (no splitting). Store full Markdown/HTML table. Add a natural-language summary chunk alongside. Attach column names as searchable metadata.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Image chunking</div>
+          Each image/figure = one chunk. Store: image ID, page, position, caption (from Vision LLM), surrounding text context. Generate text description embedding. Optionally store CLIP visual embedding separately.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 5 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(244,114,182,.2);color:#f472b6;">5</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">🧬 Embedding Generation</div>
+          <div style="font-size:11px;color:var(--text-muted);">Convert chunks into dense vectors (text) + multi-modal vectors (images)</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Text embeddings</div>
+          Model: text-embedding-3-large / BGE-M3 / E5-mistral. Domain-specific fine-tuned models for legal/medical/finance PDFs. Normalize vectors. Handle token-limit overflow with sliding window.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f472b6;">Multi-modal embeddings</div>
+          Image → CLIP embedding (OpenAI CLIP / SigLIP). Table → text embedding of Markdown representation. Hybrid: embed image caption as text + store raw visual embedding in separate index.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Metadata schema</div>
+          { source_doc, page_num, chunk_type: text|table|image, section_heading, language, creation_date, confidence_score, bounding_box }
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 6 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(79,142,247,.2);color:#4f8ef7;">6</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">🗄️ Vector Store Indexing</div>
+          <div style="font-size:11px;color:var(--text-muted);">Separate indexes per content type for precision retrieval</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Index architecture</div>
+          Index 1 (text chunks) — dense + sparse. Index 2 (table chunks) — text embedding. Index 3 (image chunks) — CLIP visual + caption text. Metadata filter layer on top of all indexes.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#a78bfa;">Storage options</div>
+          Pinecone · Weaviate · Qdrant · pgvector (Postgres) · ChromaDB · FAISS (local). BM25 / Elasticsearch for sparse/keyword hybrid. Document store: S3 / local FS for raw chunks.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Indexing metadata</div>
+          Inverted index on section_heading, page_num, chunk_type for fast metadata filtering. Graph index for cross-reference links (footnotes → main body).
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 7 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(245,158,11,.2);color:#f59e0b;">7</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">❓ Query Processing &amp; Expansion</div>
+          <div style="font-size:11px;color:var(--text-muted);">Transform raw query into an optimized retrieval signal</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Query analysis</div>
+          Classify query intent: factual lookup, table query, visual query, comparative. Detect if it needs data from multiple content types. Detect language mismatch between query and document.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Query expansion</div>
+          HyDE (Hypothetical Document Embeddings) — generate hypothetical answer, embed it. Multi-query generation: rephrase query 3–5 ways to catch diverse chunks. Synonym expansion for domain terms.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Routing</div>
+          Route query to correct index(es): "show me the bar chart on page 5" → image index. "revenue table Q3" → table index. General question → text index + optional others.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 8 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(62,207,142,.2);color:#3ecf8e;">8</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">🔎 Hybrid Retrieval</div>
+          <div style="font-size:11px;color:var(--text-muted);">Dense semantic + sparse keyword + metadata-filtered retrieval</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Dense retrieval</div>
+          ANN search (HNSW/IVF) in vector store. Top-K = 20 candidates per index. Cross-encoder reranking (Cohere Rerank / bge-reranker) to get final top-5.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#22d3ee;">Sparse retrieval</div>
+          BM25 / TF-IDF keyword search for exact terms, codes, IDs. Combine dense + sparse via RRF (Reciprocal Rank Fusion). Ensures rare but critical terms (product codes, dates) are never missed.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Context assembly</div>
+          Merge text, table, and image chunk results. De-duplicate overlapping chunks. Order by page position for reading coherence. Attach source citation metadata to each chunk.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 9 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(167,139,250,.2);color:#a78bfa;">9</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">🤖 LLM Generation</div>
+          <div style="font-size:11px;color:var(--text-muted);">Grounded answer generation with retrieved multi-modal context</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Prompt construction</div>
+          System: "Answer using only the provided context. Cite source pages." Context window: ordered chunks (text + table markdown + image captions). User query appended last. Total ≤ model context limit.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#a78bfa;">Model selection</div>
+          Text-only queries → GPT-4o / Claude Sonnet. Image-heavy queries → multimodal model (GPT-4o vision / Claude Opus with vision). Long documents → Gemini 1.5 Pro (1M token context).
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Guardrails</div>
+          Faithfulness check: verify claims against retrieved chunks. Hallucination detection (SelfCheckGPT / NLI models). Refuse answer if confidence below threshold. Flag conflicting information across chunks.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage 10 -->
+    <div class="flow-stage">
+      <div class="flow-stage-header">
+        <div class="stage-num" style="background:rgba(239,68,68,.2);color:#ef4444;">10</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">📤 Response Output &amp; Feedback</div>
+          <div style="font-size:11px;color:var(--text-muted);">Structured answer with citations, confidence, and user feedback loop</div>
+        </div>
+      </div>
+      <div class="flow-stage-body">
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#4f8ef7;">Answer structure</div>
+          { answer_text, citations: [{ page, chunk_id, excerpt }], confidence_score, source_types_used: [text, table, image], warnings: [] }
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#3ecf8e;">Rendering</div>
+          Tables rendered as HTML tables in UI. Referenced images shown inline with bounding box highlight. Citations shown as clickable page links in original PDF.
+        </div>
+        <div class="fsb-col">
+          <div class="fsb-label" style="color:#f59e0b;">Feedback loop</div>
+          User rates answer (thumbs up/down). Low-rated answers trigger re-ranking log. Periodic fine-tuning of embedder on feedback data. Drift detection if retrieval quality drops over time.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ═══════════════ TRADITIONAL RAG CHALLENGES ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title"><span class="icon">⚠️</span> Traditional RAG — Challenges by Content Type</div>
+    <div class="section-subtitle">What breaks in a naive text-only RAG pipeline when the PDF contains tables and images</div>
+
+    <div class="grid-2">
+
+      <!-- Text Extraction -->
+      <div class="card blue">
+        <div class="card-header">
+          <div class="card-icon">📝</div>
+          <div>
+            <div class="card-category">Content Type</div>
+            <div class="card-title">Text Extraction Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Scanned PDFs:</strong> text is just pixels — naive extraction returns empty or garbage strings.</li>
+          <li><strong>Multi-column layout:</strong> text extracted in wrong order (column-1-line-1, column-2-line-1 …).</li>
+          <li><strong>Headers &amp; footers:</strong> page numbers and logos injected into every chunk, polluting embeddings.</li>
+          <li><strong>Footnotes &amp; endnotes:</strong> appear mid-paragraph, breaking semantic coherence.</li>
+          <li><strong>Ligatures &amp; special chars:</strong> fi, fl, ﬁ rendered as unknown bytes, corrupting search.</li>
+          <li><strong>Mathematical equations:</strong> LaTeX or MathML rendered as image — completely lost. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Bidirectional text (RTL):</strong> Arabic/Hebrew mixed with English — word order reversed. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Invisible text layers:</strong> some PDFs have hidden text that OCR tools copy but humans never see. <span class="tag tag-rare">rare</span></li>
+        </ul>
+      </div>
+
+      <!-- Tables -->
+      <div class="card orange">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div>
+            <div class="card-category">Content Type</div>
+            <div class="card-title">Table Handling Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Structure collapse:</strong> table becomes a flat stream of cell values — rows/columns lost.</li>
+          <li><strong>Merged cells:</strong> column headers spanning 3 columns produce wrong column-to-value mapping.</li>
+          <li><strong>Multi-page tables:</strong> header row only on page 1; subsequent pages have orphaned rows. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Nested tables:</strong> tables inside cells — inner table text appended to outer cell. <span class="tag tag-rare">rare</span></li>
+          <li><strong>Implicit units:</strong> "($ thousands)" in header lost; numbers appear without unit context.</li>
+          <li><strong>Tables as images:</strong> screenshots of Excel tables — zero text extracted without OCR.</li>
+          <li><strong>Borderless tables:</strong> whitespace-aligned tables not detected as tables at all.</li>
+          <li><strong>Rotated tables:</strong> 90° landscape tables on portrait pages — text reads sideways. <span class="tag tag-edge">edge</span></li>
+        </ul>
+      </div>
+
+      <!-- Images -->
+      <div class="card purple">
+        <div class="card-header">
+          <div class="card-icon">🖼️</div>
+          <div>
+            <div class="card-category">Content Type</div>
+            <div class="card-title">Image Handling Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Complete blindness:</strong> traditional RAG skips all embedded images — charts, diagrams, photos vanish.</li>
+          <li><strong>Infographics with key data:</strong> bar charts, pie charts, trend lines contain quantitative info never indexed.</li>
+          <li><strong>Architectural diagrams:</strong> system flows, org charts — critical structural knowledge lost.</li>
+          <li><strong>Figures referenced in text:</strong> "see Figure 3" — figure never retrieved, answer is incomplete.</li>
+          <li><strong>Logos as company identifiers:</strong> document provenance lost if logo is the only brand signal. <span class="tag tag-rare">rare</span></li>
+          <li><strong>Handwritten annotations:</strong> sticky notes, margin scribbles — OCR + vision needed. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Watermarks:</strong> overlay text confuses OCR, degrading extracted text quality. <span class="tag tag-edge">edge</span></li>
+          <li><strong>QR codes &amp; barcodes:</strong> embedded product/asset IDs never decoded. <span class="tag tag-rare">rare</span></li>
+        </ul>
+      </div>
+
+      <!-- Chunking -->
+      <div class="card cyan">
+        <div class="card-header">
+          <div class="card-icon">✂️</div>
+          <div>
+            <div class="card-category">Pipeline Stage</div>
+            <div class="card-title">Chunking Strategy Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Fixed-size chunking splits sentences:</strong> cuts mid-thought, destroying local semantic context.</li>
+          <li><strong>Tables split across chunks:</strong> header in chunk N, data rows in chunk N+1 — both useless alone.</li>
+          <li><strong>Chunk overlap pollution:</strong> overlap duplicates near-identical content, boosting irrelevant results.</li>
+          <li><strong>Long section headers:</strong> a heading with no body text becomes a low-signal standalone chunk.</li>
+          <li><strong>Very long paragraphs:</strong> a single paragraph exceeds token limit — truncated mid-sentence. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Dense legal boilerplate:</strong> repetitive disclaimer text floods top-K with low-value chunks. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Cross-references lost:</strong> "see Appendix B, Section 4.2" context lost if Appendix is in a different chunk cluster. <span class="tag tag-rare">rare</span></li>
+        </ul>
+      </div>
+
+      <!-- Embedding -->
+      <div class="card green">
+        <div class="card-header">
+          <div class="card-icon">🧬</div>
+          <div>
+            <div class="card-category">Pipeline Stage</div>
+            <div class="card-title">Embedding &amp; Retrieval Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Semantic mismatch for tables:</strong> text embeddings can't encode tabular row-column relationships.</li>
+          <li><strong>Domain OOV terms:</strong> niche jargon (legal codes, drug names) under-represented in general embeddings.</li>
+          <li><strong>Multilingual document:</strong> English query can't retrieve a chunk in French/German. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Numeric queries:</strong> "revenue in 2022" — numbers poorly captured by standard text embeddings.</li>
+          <li><strong>Lexical gaps:</strong> user says "profit" but document says "net income" — semantic gap exists.</li>
+          <li><strong>Embedding model token limit:</strong> 512-token cap truncates long chunks silently. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Stale index:</strong> document updated but index not refreshed — old chunks returned. <span class="tag tag-rare">rare</span></li>
+          <li><strong>Near-duplicate documents:</strong> two versions of same PDF both indexed → duplicate context window. <span class="tag tag-rare">rare</span></li>
+        </ul>
+      </div>
+
+      <!-- LLM Generation -->
+      <div class="card pink">
+        <div class="card-header">
+          <div class="card-icon">🤖</div>
+          <div>
+            <div class="card-category">Pipeline Stage</div>
+            <div class="card-title">LLM Generation Failures</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Lost-in-the-middle:</strong> LLM ignores middle chunks when context window is long.</li>
+          <li><strong>Context window overflow:</strong> too many retrieved chunks exceed model limit — some truncated.</li>
+          <li><strong>Hallucination on gaps:</strong> if no chunk answers the question, LLM fabricates an answer.</li>
+          <li><strong>Table reasoning errors:</strong> LLM misreads Markdown table column alignment, gives wrong value.</li>
+          <li><strong>Conflicting information:</strong> two chunks disagree — LLM picks one without flagging conflict. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Time-sensitive data:</strong> old document chunk returned; LLM presents stale figure as current. <span class="tag tag-edge">edge</span></li>
+          <li><strong>Citation fabrication:</strong> LLM cites "page 7" but the relevant data is actually on page 12. <span class="tag tag-rare">rare</span></li>
+          <li><strong>Language mismatch in generation:</strong> doc is in German, query English — LLM may respond in German. <span class="tag tag-rare">rare</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ═══════════════ SOLUTIONS / MODERN APPROACH ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title"><span class="icon">✅</span> Solutions — Traditional vs Modern Multi-Modal RAG</div>
+    <div class="section-subtitle">Side-by-side comparison of what breaks and how it's fixed</div>
+
+    <div style="border-radius:12px;border:1px solid var(--border);overflow:hidden;">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th style="width:18%">Challenge Area</th>
+            <th style="width:28%">Traditional RAG Problem</th>
+            <th style="width:28%">Modern Solution</th>
+            <th style="width:12%">Tools / Tech</th>
+            <th style="width:14%">Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Scanned PDFs</td>
+            <td>Returns empty or garbled strings</td>
+            <td>OCR pipeline with layout analysis before chunking</td>
+            <td>AWS Textract, Azure DI, Tesseract 5</td>
+            <td><span class="pill pill-green">Critical fix</span></td>
+          </tr>
+          <tr>
+            <td>Table structure</td>
+            <td>Flattened to unordered text stream</td>
+            <td>Structured table extraction → Markdown/HTML + NL summary stored as twin chunks</td>
+            <td>camelot, pdfplumber, tabula-py</td>
+            <td><span class="pill pill-green">Critical fix</span></td>
+          </tr>
+          <tr>
+            <td>Images / charts</td>
+            <td>Completely ignored</td>
+            <td>Vision LLM generates caption + description; CLIP embedding for visual search</td>
+            <td>GPT-4o Vision, Claude Opus, CLIP</td>
+            <td><span class="pill pill-green">Critical fix</span></td>
+          </tr>
+          <tr>
+            <td>Multi-column layout</td>
+            <td>Wrong reading order — garbled paragraphs</td>
+            <td>Layout-aware extraction with bounding box ordering</td>
+            <td>PyMuPDF layout, Docling, Unstructured.io</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Header / footer noise</td>
+            <td>Repeating boilerplate in every chunk</td>
+            <td>Detect and strip recurring text patterns across pages</td>
+            <td>pdfplumber, custom heuristics</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Fixed-size chunking</td>
+            <td>Splits mid-sentence, destroys context</td>
+            <td>Semantic chunking (embedding similarity on sentence boundaries)</td>
+            <td>LangChain SemanticChunker, LlamaIndex</td>
+            <td><span class="pill pill-green">Critical fix</span></td>
+          </tr>
+          <tr>
+            <td>Domain-specific terms</td>
+            <td>General embeddings miss niche jargon</td>
+            <td>Fine-tuned domain embedding models or BM25 hybrid retrieval</td>
+            <td>BGE-M3, E5-mistral, ColBERT</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Multilingual docs</td>
+            <td>English query can't retrieve non-English chunks</td>
+            <td>Multilingual embeddings + cross-lingual retrieval</td>
+            <td>mE5, LaBSE, multilingual BGE</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Lost-in-the-middle</td>
+            <td>LLM ignores middle context</td>
+            <td>Reranking to put most relevant chunks first + last</td>
+            <td>Cohere Rerank, bge-reranker-v2</td>
+            <td><span class="pill pill-green">Critical fix</span></td>
+          </tr>
+          <tr>
+            <td>Hallucination on gaps</td>
+            <td>LLM fabricates when context is absent</td>
+            <td>Faithfulness scoring + "I don't know" refusal when no supporting chunk found</td>
+            <td>RAGAS, TruLens, SelfCheckGPT</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Multi-page tables</td>
+            <td>Header on page 1, orphaned rows on later pages</td>
+            <td>Detect table continuations and re-assemble before chunking</td>
+            <td>camelot pages param, custom logic</td>
+            <td><span class="pill pill-orange">High fix</span></td>
+          </tr>
+          <tr>
+            <td>Stale index</td>
+            <td>Old chunks returned after document update</td>
+            <td>Document versioning + incremental re-indexing with hash checks</td>
+            <td>LlamaIndex refresh, custom ETL</td>
+            <td><span class="pill pill-red">Low but critical at scale</span></td>
+          </tr>
+          <tr>
+            <td>Conflicting information</td>
+            <td>LLM silently picks one conflicting claim</td>
+            <td>Conflict detection across retrieved chunks; present both claims with sources</td>
+            <td>NLI models, cross-chunk comparison</td>
+            <td><span class="pill pill-red">Edge case</span></td>
+          </tr>
+          <tr>
+            <td>Encrypted PDFs</td>
+            <td>Crash or empty output</td>
+            <td>Detect encryption upfront, prompt user for password or skip gracefully</td>
+            <td>PyPDF2, pikepdf</td>
+            <td><span class="pill pill-red">Edge case</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ═══════════════ EDGE CASES ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title"><span class="icon">🧪</span> Edge Cases &amp; Rare Scenarios</div>
+    <div class="section-subtitle">Scenarios that most RAG tutorials skip — but production systems will encounter</div>
+
+    <div class="edge-grid">
+
+      <div class="edge-card">
+        <div class="edge-severity sev-high">HIGH</div>
+        <div class="edge-icon">🔒</div>
+        <div class="edge-title">Password-Protected PDF</div>
+        <div class="edge-desc">Extraction silently fails or throws. Need upfront detection and user prompt for password, or skip + log.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-high">HIGH</div>
+        <div class="edge-icon">🔁</div>
+        <div class="edge-title">Multi-Page Tables (Continued)</div>
+        <div class="edge-desc">Header row only appears on page 1. Pages 2–N have orphaned data rows with no column context. Must re-assemble table across pages.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-high">HIGH</div>
+        <div class="edge-icon">🌍</div>
+        <div class="edge-title">Mixed-Language Document</div>
+        <div class="edge-desc">English report with German appendix and French executive summary. Standard embedding models fail cross-lingual retrieval.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-high">HIGH</div>
+        <div class="edge-icon">🖼️</div>
+        <div class="edge-title">Tables Rendered as Images</div>
+        <div class="edge-desc">Excel screenshots pasted into PDF. Zero text extraction without OCR. Must detect and route to vision model.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">🔄</div>
+        <div class="edge-title">Duplicate PDF Versions</div>
+        <div class="edge-desc">v1 and v2 of same report both indexed. Query retrieves conflicting figures from both. Need content-hash dedup or version tagging.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">📐</div>
+        <div class="edge-title">Rotated / Landscape Pages</div>
+        <div class="edge-desc">Tables or diagrams on 90° rotated pages. Most parsers read text upside-down. Need rotation detection and correction.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">⚔️</div>
+        <div class="edge-title">Conflicting Figures in Same Doc</div>
+        <div class="edge-desc">Executive summary says "revenue $5M", appendix table says "$4.8M". LLM must surface conflict, not silently pick one.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">📅</div>
+        <div class="edge-title">Time-Sensitive Data</div>
+        <div class="edge-desc">Old annual report indexed. Query asks for "current" figures. Must attach document date metadata and warn when data is stale.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">∑</div>
+        <div class="edge-title">Mathematical Equations</div>
+        <div class="edge-desc">LaTeX or MathML equations rendered as images in PDF. Content completely lost to text extraction. Needs math OCR (Mathpix / Pix2Text).</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-med">MED</div>
+        <div class="edge-icon">📜</div>
+        <div class="edge-title">Legal Boilerplate Flood</div>
+        <div class="edge-desc">100-page contract with 60 pages of identical disclaimers. Top-K retrieval dominated by boilerplate. Need dedup or section exclusion.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">📄</div>
+        <div class="edge-title">PDF-within-PDF (Embedded)</div>
+        <div class="edge-desc">Some PDFs embed another PDF as an attachment. Standard parsers miss the inner document entirely.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">🖊️</div>
+        <div class="edge-title">Handwritten Annotations</div>
+        <div class="edge-desc">Margin notes and sticky annotations in scanned docs. Standard OCR misses cursive. Needs handwriting-specific model.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">💧</div>
+        <div class="edge-title">Watermarked Documents</div>
+        <div class="edge-desc">Semi-transparent "DRAFT" or "CONFIDENTIAL" overlay degrades OCR accuracy on underlying text.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">🔗</div>
+        <div class="edge-title">Cross-Document References</div>
+        <div class="edge-desc">"See Report B, Table 4.1" — referenced document not in the indexed corpus. Need graph-based cross-doc retrieval or graceful handling.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">🧾</div>
+        <div class="edge-title">Fillable Form Fields</div>
+        <div class="edge-desc">PDF forms with AcroFields. Filled values stored separately from visible text layout. Standard extraction misses form data.</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-severity sev-low">LOW</div>
+        <div class="edge-icon">👁️</div>
+        <div class="edge-title">Hidden / Invisible Text Layer</div>
+        <div class="edge-desc">OCR-generated PDFs have transparent text behind images. Can be copied programmatically but never intended to be visible.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ═══════════════ MULTI-MODAL RAG ARCHITECTURE SUMMARY ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title"><span class="icon">🏗️</span> Recommended Architecture Summary</div>
+    <div class="section-subtitle">The three parallel tracks that replace a single text pipeline</div>
+
+    <div class="grid-3">
+
+      <div class="card blue">
+        <div class="card-header">
+          <div class="card-icon">📝</div>
+          <div>
+            <div class="card-category">Track 1</div>
+            <div class="card-title">Text Pipeline</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Extract:</strong> pdfplumber / PyMuPDF + OCR fallback</li>
+          <li><strong>Clean:</strong> strip headers/footers, fix reading order</li>
+          <li><strong>Chunk:</strong> semantic chunking (sentence boundary + cosine split)</li>
+          <li><strong>Embed:</strong> text-embedding-3-large / BGE-M3</li>
+          <li><strong>Index:</strong> Qdrant dense + Elasticsearch sparse</li>
+          <li><strong>Retrieve:</strong> Hybrid RRF + cross-encoder rerank</li>
+        </ul>
+      </div>
+
+      <div class="card orange">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div>
+            <div class="card-category">Track 2</div>
+            <div class="card-title">Table Pipeline</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Detect:</strong> camelot lattice + stream modes</li>
+          <li><strong>Reconstruct:</strong> merge multi-page tables, fix merged cells</li>
+          <li><strong>Represent:</strong> Markdown + HTML + NL summary twin chunk</li>
+          <li><strong>Embed:</strong> embed both Markdown and NL summary</li>
+          <li><strong>Index:</strong> separate table index with column name metadata</li>
+          <li><strong>Retrieve:</strong> query routed to table index for numeric/aggregate Qs</li>
+        </ul>
+      </div>
+
+      <div class="card purple">
+        <div class="card-header">
+          <div class="card-icon">🖼️</div>
+          <div>
+            <div class="card-category">Track 3</div>
+            <div class="card-title">Image Pipeline</div>
+          </div>
+        </div>
+        <ul class="issue-list">
+          <li><strong>Extract:</strong> PyMuPDF extract_image + page render to PNG</li>
+          <li><strong>Describe:</strong> GPT-4o / Claude vision → structured caption JSON</li>
+          <li><strong>Embed:</strong> caption text embedding + CLIP visual embedding</li>
+          <li><strong>Index:</strong> multi-modal vector index (Weaviate multimodal)</li>
+          <li><strong>Retrieve:</strong> text-to-image or image-to-image similarity</li>
+          <li><strong>Return:</strong> image thumbnail + caption + page reference in answer</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer>
+  Built for understanding Multi-Modal RAG pipeline design &mdash; PDF ingestion: Text · Tables · Images &mdash; Traditional challenges &amp; modern solutions &mdash; 2026
+</footer>
+
+</body>
+</html>

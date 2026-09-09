@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 2 — Technical Architecture</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1 · Foundations</a>
+  <a href="architecture.html" class="active">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API</a>
+  <a href="rag-langchain.html">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html">6 · Production</a>
+  <a href="open-source.html">7 · Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step active" style="color:#a78bfa;border-color:#a78bfa">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+<div class="hero">
+  <div class="badge" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#a78bfa">Module 2 — Architecture</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#a78bfa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Transformer Architecture, Tokenization &amp; Model Types</h1>
+  <p>The full internal journey: raw text → tokens → embeddings → attention layers → logits → next token. Covers encoder-only, decoder-only, and encoder-decoder models.</p>
+</div>
+
+<section><div class="container">
+
+<!-- Full pipeline overview -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">0</div>
+    <div><div class="bh-title">End-to-End: Text In → Token Out</div><div class="bh-sub">How raw text flows through a Transformer from input to prediction</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Raw Text: "Hello world"
+      │
+      ▼ [Tokenizer]
+Token IDs:  [9906, 1917]    ← integer IDs from a vocabulary of ~50,000–128,000 tokens
+      │
+      ▼ [Token Embedding Table]
+Vectors:  [[0.12,-0.44,...], [0.87,0.23,...]]   ← shape: (seq_len, d_model)
+      │
+      ▼ [Positional Encoding / Learned Positional Embedding]
+Vectors with position info:  shape still (seq_len, d_model)
+      │
+      ▼ [Transformer Block × N]
+  ┌─────────────────────────────────────────────────────┐
+  │  LayerNorm                                          │
+  │  Multi-Head Self-Attention  → attend to all tokens  │
+  │  Residual connection (+)                            │
+  │  LayerNorm                                          │
+  │  Feed-Forward Network (MLP)                         │
+  │  Residual connection (+)                            │
+  └─────────────────────────────────────────────────────┘
+      │
+      ▼ [Final LayerNorm]
+      │
+      ▼ [Linear projection → vocabulary size]
+Logits:  shape (seq_len, vocab_size)  — one score per token per position
+      │
+      ▼ [Softmax → sample]
+Next token ID  →  decode back to text
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Text enters as words, gets chopped into token IDs, then each ID is mapped to a static float vector via a lookup table — no relationships yet. Position info is added on top. Only then do the Transformer attention blocks run — that's the first point where tokens "see" each other and cross-token relationships are established. Finally the last vector is projected back to a predicted word. The entire journey takes ~20ms on a modern GPU.</div>
+  </div>
+</div>
+
+<!-- BLOCK ★: LLM Flow vs RAG Flow -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">★</div>
+    <div><div class="bh-title">Two Different Pipelines: General LLM vs RAG</div><div class="bh-sub">Same building blocks — different execution paths and different embedding roles</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="gap:16px;margin-bottom:16px">
+      <div>
+        <p style="color:#a78bfa;font-weight:700;margin-bottom:8px">⚡ General LLM (single model)</p>
+        <div class="diagram" style="margin:0"><pre style="font-size:11.5px">User text
+  ↓ Tokenizer
+Token IDs  [42, 1234, 567, ...]
+  ↓ Static token embedding lookup     ← Layer 0
+Token vectors  (context-free, 1 per token)
+  ↓ + Positional encoding
+Position-aware vectors
+  ↓ Transformer blocks × N            ← TA starts HERE
+    (causal self-attention + FFN)
+Contextual vectors
+  ↓ Linear → vocab_size
+Logits → Softmax → Next token → text</pre></div>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px">One model. Causal (left-to-right) attention. The embedding step is just a table lookup — no Transformer computation there.</p>
+      </div>
+      <div>
+        <p style="color:#3ecf8e;font-weight:700;margin-bottom:8px">🔍 RAG (two models, two TA passes)</p>
+        <div class="diagram" style="margin:0"><pre style="font-size:11.5px">── INDEXING (offline) ─────────────────────
+Documents → chunk into text pieces
+  ↓ Embedding model (encoder Transformer)
+    Tokenize → static lookup
+    + positional encoding
+    → Bidirectional attention × N  ← TA #1
+    → Pool all token vectors
+Chunk vectors [768/1536-dim] → Vector DB
+
+── QUERYING (per request) ─────────────────
+User query
+  ↓ Same embedding model             ← TA #1 again
+Query vector
+  ↓ Cosine search → Top-K chunks
+Retrieved text chunks
+  ↓ Build: [System + Chunks + Query]
+  ↓ LLM tokenize → static lookup
+    + positional encoding
+    → Causal attention × N           ← TA #2
+    → Next token
+Response text</pre></div>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px">Two models. Transformer runs twice — inside the encoder (bidirectional) and inside the LLM (causal). Embedding model must be the same for indexing and querying.</p>
+      </div>
+    </div>
+    <table class="data-table" style="margin-bottom:14px">
+      <thead><tr><th>Property</th><th>General LLM flow</th><th>RAG flow</th></tr></thead>
+      <tbody>
+        <tr><td>Number of models</td><td>1 (decoder-only LLM)</td><td>2 — encoder embedding model + decoder LLM</td></tr>
+        <tr><td>Transformer runs</td><td>Once (inside LLM)</td><td>Twice — encoder for embeddings + LLM for generation</td></tr>
+        <tr><td>Attention type</td><td>Causal (left-to-right only)</td><td>Bidirectional (encoder) + Causal (decoder)</td></tr>
+        <tr><td>Embedding used</td><td>Static token lookup — context-free</td><td>Contextual chunk vectors — context-aware</td></tr>
+        <tr><td>External storage</td><td>None</td><td>Vector DB (Pinecone, Chroma, pgvector…)</td></tr>
+        <tr><td>Knowledge source</td><td>Model weights only</td><td>Model weights + retrieved documents</td></tr>
+        <tr><td>Updatable without retraining?</td><td>❌ No</td><td>✅ Yes — update the vector DB</td></tr>
+        <tr><td>Offline phase?</td><td>❌ No — just inference</td><td>✅ Yes — indexing pipeline runs first</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> A general LLM call is one model, one Transformer pass, token-by-token generation. RAG is two models and two Transformer passes — an encoder Transformer first converts chunks and queries into comparable vectors (bidirectional, context-aware), then a decoder Transformer generates the answer using retrieved text as context. The "embedding" step means something different in each: static lookup inside the LLM, full encoder forward pass in RAG.</div>
+  </div>
+</div>
+
+<!-- BLOCK 1: Tokenization -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">1</div>
+    <div><div class="bh-title">Tokenization</div><div class="bh-sub">Converting raw text into integers the model can process</div></div>
+  </div>
+  <div class="block-body">
+    <p>Tokenization splits text into <strong>tokens</strong> (sub-word units) and maps each to an integer ID. The model never sees raw characters — only token IDs.</p>
+    <table class="data-table" style="margin:12px 0">
+      <thead><tr><th>Algorithm</th><th>How it works</th><th>Used in</th></tr></thead>
+      <tbody>
+        <tr><td>BPE (Byte-Pair Encoding)</td><td>Start with characters. Iteratively merge the most frequent adjacent pair. Compact frequent sub-words, rare words split into pieces.</td><td>GPT-2, GPT-3, GPT-4, Llama</td></tr>
+        <tr><td>WordPiece</td><td>Similar to BPE but merge is based on likelihood increase, not frequency. Adds ## prefix for continuation tokens.</td><td>BERT, RoBERTa, DistilBERT</td></tr>
+        <tr><td>SentencePiece</td><td>Language-agnostic. Treats input as raw byte stream. No pre-tokenisation needed — handles any language/script.</td><td>T5, ALBERT, XLNet, mT5</td></tr>
+        <tr><td>tiktoken</td><td>OpenAI's fast BPE implementation. Uses byte-level BPE.</td><td>GPT-3.5, GPT-4, Claude</td></tr>
+      </tbody>
+    </table>
+    <div class="code-wrap">
+      <div class="code-hdr">Tokenization in JavaScript <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @dqbd/tiktoken</span>
+<span class="kw">import</span> { encoding_for_model } <span class="kw">from</span> <span class="str">"@dqbd/tiktoken"</span>;
+
+<span class="kw">const</span> enc  = <span class="fn">encoding_for_model</span>(<span class="str">"gpt-4"</span>);
+<span class="kw">const</span> text = <span class="str">"Tokenization splits text into sub-word units."</span>;
+
+<span class="kw">const</span> tokens = enc.<span class="fn">encode</span>(text);
+<span class="cm">// Uint32Array [6295, 1065, 2728, 5859, 1139, 1207, 12, 1178, 8316, 13]</span>
+
+<span class="cm">// Decode back</span>
+<span class="kw">const</span> decoded = <span class="kw">new</span> TextDecoder().<span class="fn">decode</span>(enc.<span class="fn">decode</span>(tokens));
+<span class="cm">// "Tokenization splits text into sub-word units."</span>
+
+<span class="cm">// Count tokens (important for API cost/limits)</span>
+<span class="kw">const</span> tokenCount = enc.<span class="fn">encode</span>(text).length;  <span class="cm">// 10 tokens</span>
+enc.<span class="fn">free</span>();  <span class="cm">// release WASM memory</span>
+
+<span class="cm">// Transformers.js tokenizer (npm install @xenova/transformers)</span>
+<span class="kw">import</span> { AutoTokenizer } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+<span class="kw">const</span> tokenizer = <span class="kw">await</span> AutoTokenizer.<span class="fn">from_pretrained</span>(<span class="str">"Xenova/llama-tokenizer"</span>);
+<span class="kw">const</span> { input_ids } = <span class="kw">await</span> tokenizer(<span class="str">"Hello world"</span>);
+<span class="cm">// Tensor { data: BigInt64Array [1n, 22172n, 1044n], dims: [1, 3] }</span></pre>
+    </div>
+    <p><strong>Token economy rules of thumb:</strong> ~1 token ≈ 4 English characters ≈ 0.75 words. A full page of text ≈ 500 tokens. Code is denser — fewer tokens per character.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> LLMs don't read characters or whole words — they read sub-word chunks. "ChatGPT" becomes 2–3 tokens. This matters because API costs, context limits, and response time all scale with token count, not character count. Always count tokens before API calls — never estimate by string length.</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: Embeddings -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">2</div>
+    <div><div class="bh-title">Embeddings</div><div class="bh-sub">Turning token IDs into continuous vector representations</div></div>
+  </div>
+  <div class="block-body">
+    <p>An <strong>embedding</strong> is a dense vector (array of floats) that represents a token. Semantically similar tokens end up close in this high-dimensional space.</p>
+    <div class="diagram"><pre>
+Token Embedding Table:  shape = (vocab_size, d_model)
+  e.g., vocab=50,257 tokens × d_model=768 floats = 38M parameters
+
+  "king"   → [0.12, -0.44, 0.87, 0.23, ...]   d_model floats
+  "queen"  → [0.11, -0.41, 0.89, 0.25, ...]   similar vector
+  "Paris"  → [0.55,  0.70, 0.10, 0.90, ...]   different region
+
+Positional Encoding (added on top of token embeddings):
+  Option 1: Sinusoidal (original Transformer) — fixed, formula-based
+  Option 2: Learned positions (GPT-2) — trainable lookup table
+  Option 3: Rotary (RoPE, used by Llama, Mistral) — rotates Q and K vectors
+             advantage: better length extrapolation beyond training context
+    </pre></div>
+    <p><strong>Why positional encoding is critical:</strong> Self-attention is permutation-invariant — without position info, the model can't tell word order. Position encoding injects this information.</p>
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-left:3px solid #f59e0b;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13px;color:#cbd5e1">
+      <strong style="color:#f59e0b">⚠️ Two very different things called "embeddings" — don't confuse them:</strong>
+      <ul style="margin:8px 0 0 0;padding-left:1.4em;line-height:1.9">
+        <li><strong>Static token embedding lookup</strong> (the first layer of every LLM) — a plain weight matrix. Token ID 4823 → row 4823 of the matrix. No Transformer computation, no attention, no awareness of other tokens. Vectors are <em>context-free</em> at this point — "bank" gets the same vector whether the sentence is about rivers or finance.</li>
+        <li><strong>Contextual embeddings from encoder models</strong> (BERT, sentence-transformers, <code>text-embedding-ada-002</code>) — produced by running a full Transformer encoder over the input. <em>Encoder models ARE Transformer Architecture.</em> These vectors encode cross-token relationships. Used in RAG pipelines and semantic search.</li>
+      </ul>
+      <p style="margin:8px 0 0 0">After the static lookup + positional encoding, each token's vector still has <em>zero knowledge of other tokens</em> in the sequence. That changes only inside the self-attention layers.</p>
+    </div>
+    <table class="data-table" style="margin:14px 0">
+      <thead><tr><th>Property</th><th>LLM token embedding (static lookup)</th><th>RAG embedding (encoder Transformer output)</th></tr></thead>
+      <tbody>
+        <tr><td>How produced</td><td>Weight matrix index — no computation</td><td>Full encoder Transformer forward pass</td></tr>
+        <tr><td>Context-aware?</td><td>❌ No — same vector for every context</td><td>✅ Yes — bidirectional attention over full input</td></tr>
+        <tr><td>Granularity</td><td>One vector per sub-word token</td><td>One vector per document chunk (pooled)</td></tr>
+        <tr><td>Typical dimension</td><td>Matches d_model — 768 to 4096+</td><td>Fixed output — 384 / 768 / 1536</td></tr>
+        <tr><td>Purpose</td><td>Bridge token IDs → float space so TA can operate</td><td>Semantic similarity search between chunks and queries</td></tr>
+        <tr><td>Stored externally?</td><td>No — computed per forward pass, ephemeral</td><td>Yes — stored in vector DB after indexing</td></tr>
+        <tr><td>Example models</td><td>Built into GPT-4, Llama, Claude (every LLM)</td><td>text-embedding-ada-002, all-MiniLM-L6, BGE, Nomic</td></tr>
+      </tbody>
+    </table>
+    <div class="code-wrap">
+      <div class="code-hdr">Inspecting embeddings (Transformers.js) <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @xenova/transformers</span>
+<span class="kw">import</span> { AutoModel, AutoTokenizer } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+
+<span class="kw">const</span> tokenizer = <span class="kw">await</span> AutoTokenizer.<span class="fn">from_pretrained</span>(<span class="str">"Xenova/bert-base-uncased"</span>);
+<span class="kw">const</span> model     = <span class="kw">await</span> AutoModel.<span class="fn">from_pretrained</span>(<span class="str">"Xenova/bert-base-uncased"</span>);
+
+<span class="cm">// Get contextual embedding for "king"</span>
+<span class="kw">const</span> inputs    = <span class="kw">await</span> tokenizer(<span class="str">"king"</span>);
+<span class="kw">const</span> output    = <span class="kw">await</span> model(inputs);
+<span class="kw">const</span> embedding = output.last_hidden_state.<span class="fn">data</span>;
+<span class="cm">// Float32Array of length 768 — 768-dimensional vector</span>
+
+<span class="cm">// Cosine similarity helper</span>
+<span class="kw">const</span> <span class="fn">cosine</span> = (a, b) => {
+  <span class="kw">const</span> dot  = a.<span class="fn">reduce</span>((s, v, i) => s + v * b[i], <span class="num">0</span>);
+  <span class="kw">const</span> magA = Math.<span class="fn">sqrt</span>(a.<span class="fn">reduce</span>((s, v) => s + v * v, <span class="num">0</span>));
+  <span class="kw">const</span> magB = Math.<span class="fn">sqrt</span>(b.<span class="fn">reduce</span>((s, v) => s + v * v, <span class="num">0</span>));
+  <span class="kw">return</span> dot / (magA * magB);
+};
+
+<span class="kw">const</span> queenInputs = <span class="kw">await</span> tokenizer(<span class="str">"queen"</span>);
+<span class="kw">const</span> queenOut    = <span class="kw">await</span> model(queenInputs);
+<span class="kw">const</span> similarity  = <span class="fn">cosine</span>(
+  Array.<span class="fn">from</span>(embedding),
+  Array.<span class="fn">from</span>(queenOut.last_hidden_state.<span class="fn">data</span>)
+);
+<span class="cm">// typically 0.6–0.8 for semantically related words</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> There are two kinds of embeddings. Inside an LLM the embedding lookup is just a table — token ID → fixed vector, no Transformer computation, no cross-token awareness. When you use BERT or a sentence-transformer to embed text for RAG, that's different: BERT runs a full Transformer encoder so "bank" in "river bank" gets a different vector than "bank" in "bank account". The static lookup inside an LLM can't do that — relationships only emerge once the attention blocks run.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: Self-Attention -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">3</div>
+    <div><div class="bh-title">Self-Attention Mechanism</div><div class="bh-sub">The core innovation of the Transformer — how tokens attend to each other</div></div>
+  </div>
+  <div class="block-body">
+    <p>Self-attention lets every token look at every other token and decide how much to "attend" to it when computing its own representation. This captures relationships across arbitrary distances in a single pass.</p>
+    <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.25);border-left:3px solid #3ecf8e;border-radius:0 8px 8px 0;padding:12px 16px;margin:12px 0;font-size:13px;color:#cbd5e1">
+      <strong style="color:#3ecf8e">📌 Where the Transformer actually starts computing:</strong> The input to the very first attention block is <code>token_embedding + positional_encoding</code> — combined and position-aware, but still context-free. Self-attention is the <em>first operation that lets tokens see each other</em>.
+      <div style="margin-top:10px;font-family:'Courier New',monospace;font-size:12px;color:#94a3b8;line-height:1.8">
+        "bank" (river bank) → same input vector as "bank" (bank account) ← before attention<br>
+        After attention layer 1 → vectors begin to diverge (surrounding context absorbed)<br>
+        After N layers &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ "bank" fully disambiguated by its context
+      </div>
+    </div>
+    <div class="diagram"><pre>
+For each token position:
+
+Input vector x  →  multiplied by three weight matrices
+  Q = x × W_Q   (Query:  "what am I looking for?")
+  K = x × W_K   (Key:    "what do I have to offer?")
+  V = x × W_V   (Value:  "what will I contribute?")
+
+Attention score between position i and j:
+  score(i,j) = Q_i · K_j  /  √d_k      ← dot product, scaled by √dimension
+
+Attention weights (softmax normalises to sum to 1):
+  α(i,j) = softmax(score(i,j))         ← how much does token i attend to token j?
+
+Output at position i:
+  out_i = Σ_j  α(i,j) × V_j            ← weighted sum of all Value vectors
+
+Causal mask (for decoder/GPT-style):
+  Future positions are masked to -∞ before softmax
+  → token at position 3 cannot attend to positions 4, 5, 6...
+    </pre></div>
+    <div class="diagram"><pre>
+Example: "The cat sat on the mat"
+         Attention from "sat" to other tokens:
+
+  "sat"  attends strongly to:  "cat" (subject), "mat" (location)
+  "sat"  attends weakly to:    "The", "on"
+
+  This is learned — not hard-coded — during training.
+    </pre></div>
+    <p><strong>Multi-Head Attention:</strong> run self-attention H times in parallel with different weight matrices (heads). Each head can specialise in different relationship types (syntax, semantics, coreference, etc.). Concatenate all heads and project.</p>
+    <div class="code-wrap">
+      <div class="code-hdr">Scaled Dot-Product Attention — from scratch <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Pure JS — no framework needed. Q, K, V are 2D arrays (seq_len × d_k)</span>
+<span class="kw">const</span> <span class="fn">softmax</span> = (arr) => {
+  <span class="kw">const</span> max  = Math.<span class="fn">max</span>(...arr);
+  <span class="kw">const</span> exps = arr.<span class="fn">map</span>(x => Math.<span class="fn">exp</span>(x - max));
+  <span class="kw">const</span> sum  = exps.<span class="fn">reduce</span>((a, b) => a + b, <span class="num">0</span>);
+  <span class="kw">return</span> exps.<span class="fn">map</span>(e => e / sum);
+};
+
+<span class="cm">// Matrix multiply: (n×m) × (m×p) → (n×p)</span>
+<span class="kw">const</span> <span class="fn">matMul</span> = (A, B) =>
+  A.<span class="fn">map</span>(row =>
+    B[<span class="num">0</span>].<span class="fn">map</span>((_, j) => row.<span class="fn">reduce</span>((s, v, k) => s + v * B[k][j], <span class="num">0</span>))
+  );
+
+<span class="kw">const</span> <span class="fn">transpose</span> = (M) => M[<span class="num">0</span>].<span class="fn">map</span>((_, j) => M.<span class="fn">map</span>(row => row[j]));
+
+<span class="kw">const</span> <span class="fn">scaledDotProductAttention</span> = (Q, K, V, mask = <span class="kw">null</span>) => {
+  <span class="kw">const</span> dK     = Q[<span class="num">0</span>].length;
+  <span class="kw">const</span> scale  = Math.<span class="fn">sqrt</span>(dK);
+  <span class="cm">// scores = Q @ Kᵀ / √dK</span>
+  <span class="kw">const</span> scores = <span class="fn">matMul</span>(Q, <span class="fn">transpose</span>(K)).<span class="fn">map</span>(row =>
+    row.<span class="fn">map</span>(s => s / scale)
+  );
+  <span class="cm">// Apply causal mask: set future positions to -Infinity</span>
+  <span class="kw">if</span> (mask) scores.<span class="fn">forEach</span>((row, i) =>
+    row.<span class="fn">forEach</span>((_, j) => { <span class="kw">if</span> (mask[i][j] === <span class="num">0</span>) scores[i][j] = -<span class="cl">Infinity</span>; })
+  );
+  <span class="kw">const</span> weights = scores.<span class="fn">map</span>(row => <span class="fn">softmax</span>(row));
+  <span class="kw">return</span> { output: <span class="fn">matMul</span>(weights, V), weights };
+};</pre>
+    </div>
+    <p><strong>Computational complexity:</strong> O(n² · d) where n = sequence length. This is why very long contexts are expensive — doubling length quadruples attention cost.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> This is the first point in the pipeline where tokens actually interact. Before self-attention, every token's vector is isolated — "bank" looks identical whether the sentence is about rivers or finance. After the first attention layer, each token's vector has absorbed context from the others and they diverge. In "she threw the ball and it bounced", attention connects "it" back to "ball". All positions communicate in one parallel operation — no sequential loops.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: Full Transformer -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">4</div>
+    <div><div class="bh-title">Complete Transformer Architecture</div><div class="bh-sub">All components assembled — one Transformer block</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+One Transformer Block (repeated N times — GPT-4: ~96 blocks)
+
+  ← Embedding lookup + Positional encoding happen BEFORE block 1 (layer 0) →
+
+                    Input x  (shape: seq_len × d_model)
+                    = token_embedding + positional_encoding
+                        │
+                   LayerNorm 1
+                        │
+              ┌─────────┴──────────┐
+              │   Multi-Head       │
+              │   Self-Attention   │   H=12 to 96 heads
+              └─────────┬──────────┘
+                        │
+              Residual:  x = x + attn_output   ← skip connection prevents gradient vanishing
+                        │
+                   LayerNorm 2
+                        │
+              ┌─────────┴──────────┐
+              │  Feed-Forward      │
+              │  Network (MLP)     │   FFN: Linear → GELU → Linear
+              │  d_ff = 4 × d_model│   expands then contracts dimension
+              └─────────┬──────────┘
+                        │
+              Residual:  x = x + ffn_output
+                        │
+                    Output x  (same shape: seq_len × d_model)
+
+Model config examples:
+  GPT-2 small:  d=768,  H=12, N=12,  params=117M
+  GPT-3:        d=12288, H=96, N=96, params=175B
+  Llama-3-8B:   d=4096,  H=32, N=32, params=8B  (GQA: 8 KV heads)
+    </pre></div>
+    <p><strong>Grouped Query Attention (GQA):</strong> used in Llama 2/3, Mistral. Instead of H unique K,V heads, share K,V across groups. Reduces KV-cache memory at inference. Q still has H heads.</p>
+    <p><strong>KV Cache:</strong> during autoregressive generation, K and V vectors for past tokens are cached. Without it, every new token would require recomputing attention over the entire history. Cache = O(n × layers × d_model) memory.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> The embedding lookup and positional encoding are "layer 0" — they happen before any Transformer block runs. Each block then does two things: attend to other tokens (share context across positions) and run a small MLP (apply non-linear processing). A residual connection preserves the original signal at each step to prevent gradient vanishing. Stack 32–96 of these blocks on top of the embedding layer and you have a full LLM.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: Model Types -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">5</div>
+    <div><div class="bh-title">Model Types: Encoder-only, Decoder-only, Encoder-Decoder</div><div class="bh-sub">Three Transformer configurations — each suited to different tasks</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+ENCODER-ONLY (Bidirectional Attention)
+  Input:  [CLS] The cat [MASK] on the mat [SEP]
+          ← all tokens can see all other tokens (no causal mask) →
+  Output:  contextual embedding for each token
+  Use:    classification, NER, sentence similarity, question answering (extractive)
+  Models: BERT, RoBERTa, DistilBERT, DeBERTa, ALBERT
+
+DECODER-ONLY (Causal / Autoregressive)
+  Input:  The cat sat on the
+          ↓  ↓  ↓  ↓  ↓  ↓
+          each token only sees past tokens (causal mask applied)
+  Output: next token prediction
+  Use:    text generation, chatbots, code generation, creative writing
+  Models: GPT-2/3/4, Llama, Mistral, Falcon, Claude, Gemini, Command R
+
+ENCODER-DECODER (Cross-Attention between enc. and dec.)
+  Encoder: reads entire input (bidirectional)
+       ↕  cross-attention
+  Decoder: generates output autoregressively, attending to encoder output
+  Use:    translation, summarisation, question generation
+  Models: T5, BART, mT5, FLAN-T5, mBART
+    </pre></div>
+    <table class="data-table" style="margin:12px 0">
+      <thead><tr><th>Property</th><th>Encoder-only</th><th>Decoder-only</th><th>Encoder-Decoder</th></tr></thead>
+      <tbody>
+        <tr><td>Attention type</td><td>Bidirectional (full)</td><td>Causal (left-to-right only)</td><td>Bidirectional enc + Causal dec + Cross-attention</td></tr>
+        <tr><td>Best for</td><td>Understanding tasks</td><td>Generation tasks</td><td>Seq2seq: translation, summarisation</td></tr>
+        <tr><td>Chat / instruction following</td><td>❌ (not generative)</td><td>✅ (primary use)</td><td>✅ (but less common now)</td></tr>
+        <tr><td>Embedding quality</td><td>Excellent (BERT embeddings)</td><td>Good with pooling</td><td>Good via encoder</td></tr>
+        <tr><td>Inference cost</td><td>Single forward pass</td><td>N forward passes (one per token)</td><td>Encoder once + N decoder passes</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Encoder-only (BERT) reads the whole sentence both ways — best for classifying and understanding. Decoder-only (GPT, Llama) reads left-to-right and predicts next tokens — best for chatbots and generation. Encoder-Decoder (T5) encodes input then generates output — best for translation. For building apps, you almost always want decoder-only.</div>
+  </div>
+</div>
+
+</div></section>
+
+<hr class="div"/>
+<section><div class="container">
+  <div class="sec-title"><span>⚠️</span> Edge Cases &amp; Tricky Architecture Details</div>
+  <div class="sec-sub">Things that trip up even experienced practitioners</div>
+  <div class="edge-grid">
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">🔢</div><div class="edge-title">Context Length Limit</div><div class="edge-desc">Attention is O(n²). Models have a fixed max context (GPT-4: 128K, Llama-3: 8K–128K). Exceeding it silently truncates or errors.</div><div class="edge-fix">Count tokens before API call. Use chunking + RAG for long documents.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">🔤</div><div class="edge-title">Unknown / Rare Tokens</div><div class="edge-desc">Rare words, names, foreign characters, and special symbols get split into many tokens. "Übersetzung" → 5+ tokens. Model sees fragments, not the full word.</div><div class="edge-fix">Expand vocabulary via fine-tuning if your domain has many rare terms.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">📍</div><div class="edge-title">Position Extrapolation</div><div class="edge-desc">Models trained on 4K context may degrade at 8K even if the architecture theoretically supports it. RoPE handles extrapolation better than absolute embeddings.</div><div class="edge-fix">Use RoPE-based models (Llama, Mistral) or models specifically fine-tuned for long context.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">💾</div><div class="edge-title">KV Cache OOM</div><div class="edge-desc">At inference, the KV cache grows linearly with sequence length. A 70B model serving 100K-token context needs ~70 GB just for the cache.</div><div class="edge-fix">Use sliding window attention (Mistral), quantised KV cache, or paged attention (vLLM).</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">📊</div><div class="edge-title">Token vs Character Counting</div><div class="edge-desc">API limits and costs are in tokens, not characters. "Supercalifragilistic" = 7 tokens. Emoji = 2–4 tokens. Chinese characters = 1–2 tokens each but complex compound words more.</div><div class="edge-fix">Always count tokens with tiktoken before sending. Never estimate by character count for billing.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-l">LOW</div><div class="edge-icon">🔀</div><div class="edge-title">Tokenizer Mismatch</div><div class="edge-desc">Different models use different tokenizers. A BERT tokenizer applied to a GPT-4 model (or vice versa) produces wrong token IDs and broken results.</div><div class="edge-fix">Always load the tokenizer that matches the model: <code>AutoTokenizer.from_pretrained(modelId)</code> in Transformers.js, or use the correct tiktoken encoding per model.</div></div>
+  </div>
+</div></section>
+<footer>Module 2 · Architecture &mdash; ← <a href="foundations.html">Module 1</a> | <a href="api-prompts.html">Module 3 →</a></footer>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 3 — API Integration &amp; Prompt Engineering</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1·Foundations</a>
+  <a href="architecture.html">2·Architecture</a>
+  <a href="api-prompts.html" class="active">3·API &amp; Prompts</a>
+  <a href="rag-langchain.html">4·RAG</a>
+  <a href="agents.html">5·Agents</a>
+  <a href="production.html">6·Production</a>
+  <a href="open-source.html">7·Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step active" style="color:#22d3ee;border-color:#22d3ee">3·API &amp; Prompts</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+<div class="hero">
+  <div class="badge" style="background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);color:#22d3ee">Module 3 — API &amp; Prompts</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#22d3ee,#3ecf8e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">API Integration &amp; Prompt Engineering</h1>
+  <p>Calling the ChatGPT API from JavaScript, understanding every parameter, building applications, and mastering prompt techniques that reliably steer model behaviour.</p>
+</div>
+
+<section><div class="container">
+
+<!-- API Architecture Block -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">1</div>
+    <div><div class="bh-title">ChatGPT API — Full Request/Response Flow</div><div class="bh-sub">From JavaScript code to model output — every layer explained</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Your Code
+   │  POST /v1/chat/completions
+   │  Headers: Authorization: Bearer sk-...
+   │  Body: { model, messages, temperature, max_tokens, ... }
+   ▼
+OpenAI API Gateway
+   │  Auth check → rate-limit check → token count check
+   ▼
+Model Inference (GPU cluster)
+   │  Tokenise messages → forward pass → sample → detokenise
+   ▼
+Response
+   │  { id, object, created, model,
+   │    choices: [{ message: { role, content }, finish_reason }],
+   │    usage: { prompt_tokens, completion_tokens, total_tokens } }
+   ▼
+Your Code  →  response.choices[0].message.content
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr">Basic API call (JavaScript) <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install openai</span>
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>({ apiKey: process.env.<span class="cl">OPENAI_API_KEY</span> });
+
+<span class="kw">const</span> response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:             <span class="str">"gpt-4o"</span>,
+  messages: [
+    { role: <span class="str">"system"</span>, content: <span class="str">"You are a helpful assistant."</span> },
+    { role: <span class="str">"user"</span>,   content: <span class="str">"Explain transformers in 2 sentences."</span> },
+  ],
+  temperature:       <span class="num">0.7</span>,
+  max_tokens:        <span class="num">200</span>,
+  top_p:             <span class="num">0.9</span>,
+  frequency_penalty: <span class="num">0.0</span>,
+  presence_penalty:  <span class="num">0.0</span>,
+});
+
+<span class="kw">const</span> answer = response.choices[<span class="num">0</span>].message.content;
+<span class="kw">const</span> finish = response.choices[<span class="num">0</span>].finish_reason;  <span class="cm">// "stop" | "length" | "tool_calls"</span>
+<span class="kw">const</span> tokens = response.usage.total_tokens;</pre>
+    </div>
+
+    <p><strong>All parameters explained:</strong></p>
+    <table class="data-table" style="margin:12px 0">
+      <thead><tr><th>Parameter</th><th>Type</th><th>What it controls</th><th>Typical value</th></tr></thead>
+      <tbody>
+        <tr><td>model</td><td>string</td><td>Which model to call</td><td>"gpt-4o", "gpt-4o-mini"</td></tr>
+        <tr><td>messages</td><td>array</td><td>Conversation history (system, user, assistant turns)</td><td>Required</td></tr>
+        <tr><td>temperature</td><td>0–2</td><td>Randomness of output. 0 = near-deterministic</td><td>0.7 creative, 0.2 factual</td></tr>
+        <tr><td>max_tokens</td><td>int</td><td>Max output tokens. Model stops when hit.</td><td>512–4096</td></tr>
+        <tr><td>top_p</td><td>0–1</td><td>Nucleus sampling threshold. Use OR temperature, not both.</td><td>0.9</td></tr>
+        <tr><td>frequency_penalty</td><td>-2 to 2</td><td>Penalises tokens proportionally to how often they've appeared. Reduces repetition.</td><td>0–0.5</td></tr>
+        <tr><td>presence_penalty</td><td>-2 to 2</td><td>Flat penalty if token appeared at all. Encourages new topics.</td><td>0–0.5</td></tr>
+        <tr><td>stop</td><td>string/array</td><td>Stop generation when this string is encountered</td><td>["\n\n", "END"]</td></tr>
+        <tr><td>seed</td><td>int</td><td>Attempt reproducibility (not guaranteed)</td><td>42</td></tr>
+        <tr><td>response_format</td><td>object</td><td>Force JSON output: {"type":"json_object"}</td><td>—</td></tr>
+        <tr><td>stream</td><td>bool</td><td>Server-sent events — tokens arrive as they're generated</td><td>false</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> You POST a JSON with your conversation and settings, a GPU runs inference, and you get tokens back. The three controls you'll touch most: temperature (creativity knob), max_tokens (output length cap), and top_p (vocabulary range). Always check finish_reason — if it says "length", your response was silently cut off mid-sentence.</div>
+  </div>
+</div>
+
+<!-- Message Roles -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">2</div>
+    <div><div class="bh-title">Message Roles &amp; Multi-Turn Conversations</div><div class="bh-sub">system / user / assistant — how the conversation context is built</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+messages = [
+  { role: "system",    content: "You are a Python expert..." }   ← persistent instruction
+  { role: "user",      content: "How do I read a CSV?" }         ← human turn 1
+  { role: "assistant", content: "Use pandas: pd.read_csv(…)" }   ← model turn 1
+  { role: "user",      content: "What about large files?" }      ← human turn 2
+]
+↓
+Model sees ALL messages as context and responds to the last user turn.
+
+System role:
+  - Sets behaviour, persona, output format, constraints
+  - Processed first; has strong influence
+  - Not shown to end user in typical chat apps
+
+Context window fills up as conversation grows:
+  Strategy: trim oldest messages, or summarise them
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr">Streaming responses <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Tokens arrive in real-time — better UX for long outputs</span>
+<span class="kw">const</span> stream = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"gpt-4o"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Write a poem about AI."</span> }],
+  stream:   <span class="kw">true</span>,
+});
+
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> stream) {
+  <span class="kw">const</span> delta = chunk.choices[<span class="num">0</span>]?.delta?.content;
+  <span class="kw">if</span> (delta) process.stdout.<span class="fn">write</span>(delta);
+}</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr">Structured JSON output <span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Force JSON-parseable response</span>
+<span class="kw">const</span> response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model: <span class="str">"gpt-4o"</span>,
+  messages: [
+    { role: <span class="str">"system"</span>, content: <span class="str">"Respond only with valid JSON."</span> },
+    { role: <span class="str">"user"</span>,   content: <span class="str">"Extract: name, age from 'Alice is 30 years old'."</span> },
+  ],
+  response_format: { type: <span class="str">"json_object"</span> },
+});
+
+<span class="kw">const</span> data = <span class="cl">JSON</span>.<span class="fn">parse</span>(response.choices[<span class="num">0</span>].message.content);
+<span class="cm">// { name: "Alice", age: 30 }</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> system = your standing instructions — persona, rules, output format. user = what the human typed. assistant = what the model replied last time. The model sees the entire array on every single call — there is no built-in memory. You maintain conversation history yourself and pass it each time.</div>
+  </div>
+</div>
+
+<!-- Prompt Engineering -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">3</div>
+    <div><div class="bh-title">Prompt Engineering</div><div class="bh-sub">Techniques to reliably steer model behaviour — from zero-shot to ReAct</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="mini-card blue">
+        <div class="mc-icon">0️⃣</div>
+        <div class="mc-title">Zero-Shot</div>
+        <div class="mc-body">Give the task directly with no examples. Works well for simple, clear instructions. Model relies entirely on pre-training.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-icon">🔢</div>
+        <div class="mc-title">Few-Shot</div>
+        <div class="mc-body">Provide 2–5 input/output examples before the real query. Dramatically improves performance on formatting, classification, or domain-specific tasks.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-icon">🔗</div>
+        <div class="mc-title">Chain-of-Thought (CoT)</div>
+        <div class="mc-body">Ask the model to "think step by step" before answering. Forces intermediate reasoning. Improves math, logic, multi-step problems significantly.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-icon">⚛️</div>
+        <div class="mc-title">ReAct</div>
+        <div class="mc-body">Reason + Act loop. Model alternates: Thought → Action (tool call) → Observation → next Thought. Used heavily in agents (Module 5).</div>
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-hdr">Few-shot prompting example <span class="code-lang">JS</span></div>
+      <pre><span class="kw">const</span> messages = [
+  { role: <span class="str">"system"</span>,    content: <span class="str">"Classify sentiment as Positive, Negative, or Neutral."</span> },
+  <span class="cm">// Few-shot examples</span>
+  { role: <span class="str">"user"</span>,      content: <span class="str">"I love this product!"</span> },
+  { role: <span class="str">"assistant"</span>, content: <span class="str">"Positive"</span> },
+  { role: <span class="str">"user"</span>,      content: <span class="str">"This is the worst thing ever."</span> },
+  { role: <span class="str">"assistant"</span>, content: <span class="str">"Negative"</span> },
+  <span class="cm">// Real query</span>
+  { role: <span class="str">"user"</span>,      content: <span class="str">"It's okay, nothing special."</span> },
+];
+<span class="cm">// Model reliably responds: "Neutral"</span></pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-hdr">Chain-of-Thought prompting <span class="code-lang">JS</span></div>
+      <pre><span class="kw">const</span> messages = [
+  {
+    role: <span class="str">"system"</span>,
+    content: <span class="str">"You are a math tutor. "</span>
+           + <span class="str">"Think through the problem step by step before giving the final answer. "</span>
+           + <span class="str">"End with 'Answer: &lt;number&gt;'"</span>,
+  },
+  {
+    role: <span class="str">"user"</span>,
+    content: <span class="str">"A shop sells 3 types of fruit. Apples cost $1.20, oranges $0.80, "</span>
+           + <span class="str">"bananas $0.50. If I buy 4 apples, 3 oranges, and 5 bananas, what's my total?"</span>,
+  },
+];
+<span class="cm">// Model: "4×1.20 = 4.80, 3×0.80 = 2.40, 5×0.50 = 2.50. Total = 9.70. Answer: 9.70"</span></pre>
+    </div>
+
+    <p><strong>Advanced prompt patterns:</strong></p>
+    <table class="data-table" style="margin:12px 0">
+      <thead><tr><th>Pattern</th><th>When to use</th><th>Key instruction</th></tr></thead>
+      <tbody>
+        <tr><td>Self-consistency</td><td>Ambiguous reasoning tasks</td><td>Generate N answers with high temperature, pick majority vote</td></tr>
+        <tr><td>Tree of Thought (ToT)</td><td>Complex multi-path problems</td><td>"Explore multiple approaches. Evaluate each. Pick the best."</td></tr>
+        <tr><td>Role prompting</td><td>Domain expertise needed</td><td>"You are a senior DevOps engineer with 15 years of experience…"</td></tr>
+        <tr><td>Output format constraint</td><td>Structured data extraction</td><td>"Respond ONLY as a JSON object with keys: title, author, year."</td></tr>
+        <tr><td>Negative prompting</td><td>Avoiding unwanted behaviour</td><td>"Do not use bullet points. Do not repeat the question."</td></tr>
+        <tr><td>Delimiters</td><td>Separating instructions from data</td><td>Use &lt;&lt;&lt;, """, or XML tags to wrap user-provided text</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Zero-shot just asks. Few-shot shows 2–3 examples before asking — dramatically improves format consistency. Chain-of-thought tells it to think step by step, unlocking reliable multi-step reasoning. These are not tricks; they are how you communicate intent to a statistical system that has no access to your internal goals.</div>
+    <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px;color:#94a3b8">
+      <span style="font-weight:700;color:#22d3ee">→ Cross-reference:</span> For a scenario-by-scenario guide on when to use zero-shot vs few-shot vs CoT vs RAG vs fine-tuning — and when to stop at prompting — see <a href="when-to-use.html" style="color:#22d3ee">Module 10 · When to Use What</a> (Block 2: Prompting vs RAG vs Fine-tuning).
+    </div>
+  </div>
+</div>
+
+<!-- Building Applications -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">4</div>
+    <div><div class="bh-title">Building Applications with the API</div><div class="bh-sub">Patterns for production app development</div></div>
+  </div>
+  <div class="block-body">
+    <div class="code-wrap">
+      <div class="code-hdr">Retry logic + error handling <span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> OpenAI, { RateLimitError, APIError } <span class="kw">from</span> <span class="str">"openai"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>();
+
+<span class="kw">const</span> <span class="fn">sleep</span> = (ms) => <span class="kw">new</span> <span class="cl">Promise</span>(res => <span class="fn">setTimeout</span>(res, ms));
+
+<span class="kw">const</span> <span class="fn">callWithRetry</span> = <span class="kw">async</span> (messages, model = <span class="str">"gpt-4o"</span>, maxRetries = <span class="num">3</span>) => {
+  <span class="kw">for</span> (<span class="kw">let</span> attempt = <span class="num">0</span>; attempt &lt; maxRetries; attempt++) {
+    <span class="kw">try</span> {
+      <span class="kw">return await</span> client.chat.completions.<span class="fn">create</span>({
+        model, messages, max_tokens: <span class="num">1024</span>,
+      });
+    } <span class="kw">catch</span> (err) {
+      <span class="kw">if</span> (err <span class="kw">instanceof</span> <span class="cl">RateLimitError</span>) {
+        <span class="kw">const</span> wait = <span class="num">1000</span> * (<span class="num">2</span> ** attempt);  <span class="cm">// 1s, 2s, 4s</span>
+        console.<span class="fn">warn</span>(<span class="str">`Rate limited. Waiting <span class="kw">${wait}</span>ms…`</span>);
+        <span class="kw">await</span> <span class="fn">sleep</span>(wait);
+      } <span class="kw">else if</span> (err <span class="kw">instanceof</span> <span class="cl">APIError</span> &amp;&amp; err.status === <span class="num">500</span> &amp;&amp; attempt &lt; maxRetries - <span class="num">1</span>) {
+        <span class="kw">await</span> <span class="fn">sleep</span>(<span class="num">1000</span>);
+      } <span class="kw">else</span> {
+        <span class="kw">throw</span> err;
+      }
+    }
+  }
+  <span class="kw">throw new</span> <span class="cl">Error</span>(<span class="str">"Max retries exceeded"</span>);
+};</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr">Conversation memory manager <span class="code-lang">JS</span></div>
+      <pre><span class="kw">class</span> <span class="cl">ChatSession</span> {
+  <span class="fn">constructor</span>(systemPrompt, maxHistory = <span class="num">20</span>) {
+    <span class="kw">this</span>.history    = [{ role: <span class="str">"system"</span>, content: systemPrompt }];
+    <span class="kw">this</span>.maxHistory = maxHistory;
+  }
+
+  <span class="kw">async</span> <span class="fn">chat</span>(userMessage) {
+    <span class="kw">this</span>.history.<span class="fn">push</span>({ role: <span class="str">"user"</span>, content: userMessage });
+    <span class="kw">const</span> response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+      model: <span class="str">"gpt-4o"</span>, messages: <span class="kw">this</span>.history,
+    });
+    <span class="kw">const</span> reply = response.choices[<span class="num">0</span>].message.content;
+    <span class="kw">this</span>.history.<span class="fn">push</span>({ role: <span class="str">"assistant"</span>, content: reply });
+    <span class="cm">// Trim oldest user/assistant pairs if too long</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.history.length > <span class="kw">this</span>.maxHistory + <span class="num">1</span>) {
+      <span class="kw">this</span>.history = [<span class="kw">this</span>.history[<span class="num">0</span>], ...<span class="kw">this</span>.history.<span class="fn">slice</span>(-<span class="kw">this</span>.maxHistory)];
+    }
+    <span class="kw">return</span> reply;
+  }
+}</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Three things every production app needs: exponential backoff retry logic (rate limits will hit you), a conversation history manager that trims old messages when the context window fills, and finish_reason checking to detect truncated responses before they silently corrupt your app's output.</div>
+  </div>
+</div>
+
+<!-- GenAI Frameworks -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">5</div>
+    <div><div class="bh-title">GenAI Application Frameworks</div><div class="bh-sub">Overview of the orchestration layer between your app and the LLM</div></div>
+  </div>
+  <div class="block-body">
+    <table class="data-table" style="margin:0 0 12px">
+      <thead><tr><th>Framework</th><th>Core strength</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td>LangChain</td><td>Chains, agents, memory, LLM abstraction. Large ecosystem of integrations.</td><td>General-purpose GenAI apps, RAG, agents (covered in Module 4/5)</td></tr>
+        <tr><td>LlamaIndex</td><td>Data connectors, indexing, advanced query engines. Excellent for RAG over structured + unstructured data.</td><td>Document Q&amp;A, knowledge bases</td></tr>
+        <tr><td>Haystack (deepset)</td><td>Production-grade pipelines with built-in evaluation. Declarative pipeline YAML.</td><td>Enterprise search, question answering</td></tr>
+        <tr><td>Semantic Kernel (Microsoft)</td><td>.NET/Python/Java. Plugin architecture for enterprise integration.</td><td>Microsoft ecosystem apps</td></tr>
+        <tr><td>DSPy (Stanford)</td><td>Programmatic LLM pipelines with automatic prompt optimisation.</td><td>Research, automated prompt tuning</td></tr>
+      </tbody>
+    </table>
+    <p>All these frameworks ultimately call the same APIs you learned in this module — they just add orchestration, memory, and tooling on top. See <a href="rag-langchain.html">Module 4</a> for LangChain in depth.</p>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> LangChain, LlamaIndex, and similar frameworks are productivity layers that wrap the same API calls you just learned. They save you from rewriting retry logic, prompt templates, memory management, and tool routing in every project. Use them — but understand the raw API first so you can debug when the abstraction breaks.</div>
+  </div>
+</div>
+
+</div></section>
+
+<hr class="div"/>
+<section><div class="container">
+  <div class="sec-title"><span>⚠️</span> Edge Cases &amp; API Gotchas</div>
+  <div class="sec-sub">Issues that catch developers off-guard in production</div>
+  <div class="edge-grid">
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">🚦</div><div class="edge-title">Rate Limit Errors (429)</div><div class="edge-desc">Token-per-minute and request-per-minute limits vary by tier. Burst traffic will hit 429 even if daily quota is fine.</div><div class="edge-fix">Implement exponential backoff with jitter. Use a token bucket / queue for high-volume apps.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">✂️</div><div class="edge-title">finish_reason = "length"</div><div class="edge-desc">Model ran out of max_tokens mid-sentence. The response JSON is valid but content is incomplete. Most apps silently ignore this.</div><div class="edge-fix">Always check finish_reason. If "length", retry with higher max_tokens or paginate.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-h">HIGH</div><div class="edge-icon">💉</div><div class="edge-title">Prompt Injection</div><div class="edge-desc">User input contains instructions that override your system prompt. "Ignore previous instructions and…" is the classic pattern.</div><div class="edge-fix">Use delimiters to separate instructions from user data. Validate outputs. Don't give model access to destructive tools.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">🌡️</div><div class="edge-title">Temperature + Top-p Interaction</div><div class="edge-desc">OpenAI docs say "use one, not both". Using both can produce unexpected distributions. temperature=1 + top_p=1 = maximum randomness.</div><div class="edge-fix">Set temperature for creative tasks, top_p for controlled diversity. Rarely change both.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">💰</div><div class="edge-title">Unexpected Token Costs</div><div class="edge-desc">System prompts count as input tokens every call. A 2000-token system prompt at 10M calls = 20B input tokens.</div><div class="edge-fix">Keep system prompts concise. Use the prompt caching feature (OpenAI/Anthropic) for repeated large prompts.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-m">MED</div><div class="edge-icon">🔒</div><div class="edge-title">API Key Exposure</div><div class="edge-desc">Hardcoding keys in source code or .env files committed to git is a common security breach.</div><div class="edge-fix">Use environment variables. Add .env to .gitignore. Rotate keys immediately if exposed. Use secrets managers in production.</div></div>
+    <div class="edge-card"><div class="edge-sev sev-l">LOW</div><div class="edge-icon">🧩</div><div class="edge-title">JSON Mode Hallucination</div><div class="edge-desc">response_format:"json_object" forces JSON structure but not the schema. Model may invent field names or omit required fields.</div><div class="edge-fix">Use function calling / structured outputs (OpenAI) for strict schema enforcement. Validate with Zod.</div></div>
+  </div>
+</div></section>
+<footer>Module 3 · API &amp; Prompts &mdash; ← <a href="architecture.html">Module 2</a> | <a href="rag-langchain.html">Module 4 →</a></footer>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 10 — When to Use What</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+/* When-to-Use specific styles */
+.wtu-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid rgba(255,255,255,.08); border-radius:10px; overflow:hidden; margin-bottom:16px; }
+.wtu-col { padding:18px 20px; }
+.wtu-use  { background:rgba(34,197,94,.07); border-right:1px solid rgba(255,255,255,.08); }
+.wtu-skip { background:rgba(239,68,68,.07); }
+.wtu-col-label { font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin-bottom:10px; }
+.use-label  { color:#22c55e; }
+.skip-label { color:#ef4444; }
+.wtu-col ul { margin:0 0 0 14px; padding:0; font-size:12.5px; color:#94a3b8; line-height:1.75; }
+.wtu-col li { margin-bottom:3px; }
+.wtu-col li strong { color:#cbd5e1; }
+
+/* Option cards */
+.opt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-bottom:16px; }
+.opt-card { background:#1a1d27; border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:14px 16px; }
+.opt-name { font-size:13px; font-weight:700; color:#e2e8f0; margin-bottom:6px; }
+.opt-when { font-size:11.5px; color:#94a3b8; line-height:1.6; }
+.opt-tag  { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; margin-bottom:8px; }
+
+/* Decision table */
+.dec-table { width:100%; border-collapse:collapse; font-size:12.5px; margin:12px 0; }
+.dec-table th { background:rgba(255,255,255,.05); color:#94a3b8; padding:8px 12px; text-align:left; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+.dec-table td { padding:8px 12px; border-top:1px solid rgba(255,255,255,.05); color:#cbd5e1; vertical-align:top; line-height:1.5; }
+.dec-table tr td:first-child { color:#e2e8f0; font-weight:600; }
+.dec-table tr:hover td { background:rgba(255,255,255,.015); }
+.tag-yes { color:#22c55e; font-weight:700; }
+.tag-no  { color:#ef4444; }
+.tag-ok  { color:#f59e0b; }
+
+/* Section label chips */
+.sec-chip { display:inline-block; font-size:10px; font-weight:700; padding:3px 10px; border-radius:999px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; }
+
+/* Scenario rows */
+.scenario { background:#1a1d27; border:1px solid rgba(255,255,255,.07); border-radius:8px; padding:14px 18px; margin-bottom:10px; display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; }
+.scenario-icon { font-size:20px; }
+.scenario-body { font-size:12.5px; }
+.scenario-q { color:#e2e8f0; font-weight:700; margin-bottom:5px; }
+.scenario-a { color:#94a3b8; line-height:1.6; }
+.scenario-a strong { color:#a78bfa; }
+
+@media(max-width:640px){ .wtu-grid{grid-template-columns:1fr} .opt-grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1·Foundations</a>
+  <a href="architecture.html">2·Architecture</a>
+  <a href="api-prompts.html">3·API</a>
+  <a href="rag-langchain.html">4·RAG</a>
+  <a href="agents.html">5·Agents</a>
+  <a href="production.html">6·Production</a>
+  <a href="open-source.html">7·Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html" class="active">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>
+  <a href="when-to-use.html" class="fb-step active" style="color:#c084fc;border-color:#c084fc">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.35);color:#c084fc">Module 10 — When to Use</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#c084fc,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">When to Use What — Decision Reference</h1>
+  <p>Concrete, scenario-driven guidance across every LLM decision: model selection, knowledge strategy, fine-tuning method, agent pattern, deployment target, and more.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 1: Model Selection -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">1</div>
+    <div><div class="bh-title">Which Model to Use</div><div class="bh-sub">Standard LLM · Reasoning model · SLM · Embedding model</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="opt-grid">
+      <div class="opt-card" style="border-top:3px solid #4f8ef7">
+        <span class="opt-tag" style="background:rgba(79,142,247,.15);color:#4f8ef7">Standard LLM</span>
+        <div class="opt-name">GPT-4o · Claude 3.5 · Gemini 1.5</div>
+        <div class="opt-when">Everyday chat, summarisation, extraction, translation, content generation, code assistance, customer support</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f472b6">
+        <span class="opt-tag" style="background:rgba(244,114,182,.15);color:#f472b6">Reasoning Model</span>
+        <div class="opt-name">o3 · o4-mini · DeepSeek-R1 · Claude 3.7</div>
+        <div class="opt-when">Complex math, multi-step code generation, scientific reasoning, formal proofs, tasks where single-pass LLMs consistently fail</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #22c55e">
+        <span class="opt-tag" style="background:rgba(34,197,94,.15);color:#22c55e">Small LLM (SLM)</span>
+        <div class="opt-name">Phi-3.5-Mini · Qwen2.5-7B · Llama-3.2-1B</div>
+        <div class="opt-when">On-device / offline inference, privacy-sensitive data, high-volume low-cost tasks, well-defined focused domain (classify, extract, summarise)</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f59e0b">
+        <span class="opt-tag" style="background:rgba(245,158,11,.15);color:#f59e0b">Embedding Model</span>
+        <div class="opt-name">text-embedding-3-small · nomic-embed · BGE</div>
+        <div class="opt-when">Semantic search, RAG retrieval, sentence similarity, clustering, classification via cosine distance. NOT for text generation.</div>
+      </div>
+    </div>
+
+    <table class="dec-table">
+      <tr><th>Scenario</th><th>Best choice</th><th>Why</th></tr>
+      <tr><td>Summarise 50 support tickets per minute</td><td><span class="tag-yes">SLM fine-tuned</span></td><td>Cheap, fast, private; quality matches GPT-4 on narrow task</td></tr>
+      <tr><td>Solve competitive math olympiad problem</td><td><span class="tag-yes">o3 (high effort)</span></td><td>Needs test-time reasoning chain; standard LLM scores &lt;15%</td></tr>
+      <tr><td>Chatbot that works offline on iPhone</td><td><span class="tag-yes">Llama-3.2-1B (quantised)</span></td><td>Only 1B params fits iPhone RAM; runs at 30 tok/s</td></tr>
+      <tr><td>Find similar documents in a knowledge base</td><td><span class="tag-yes">Embedding model</span></td><td>Cosine similarity over embeddings, not generation</td></tr>
+      <tr><td>Generate a product description from specs</td><td><span class="tag-yes">GPT-4o-mini or Claude Haiku</span></td><td>Simple generation; small fast model is sufficient and cheap</td></tr>
+      <tr><td>Auto-generate unit tests for a 500-line file</td><td><span class="tag-yes">o3-mini or Claude 3.7</span></td><td>Complex multi-file reasoning; benefits from extended thinking</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Use Reasoning Models when</div>
+        <ul>
+          <li>Task consistently fails with standard models</li>
+          <li>Multi-step chains where one bad step fails the whole answer</li>
+          <li>Math, proofs, algorithm correctness</li>
+          <li>Complex code: multi-file refactors, algorithmic design</li>
+          <li>Quality &gt;&gt; cost and latency is acceptable (10-120s)</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Skip Reasoning Models when</div>
+        <ul>
+          <li>Simple Q&amp;A, summarisation, extraction</li>
+          <li>Latency &lt; 2s is required (real-time chat, typeahead)</li>
+          <li>High-volume workload — cost is 10-100× standard models</li>
+          <li>Task is well-defined and standard models already nail it</li>
+          <li>Streaming UX — thinking tokens add significant delay</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Default to a standard model for everyday tasks. Switch to a reasoning model only when the task genuinely requires multi-step thinking (math, hard code). Use SLMs when cost, latency, or privacy demand local execution. Use embedding models only for search/similarity — never for generating text.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 2: Knowledge Strategy -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">2</div>
+    <div><div class="bh-title">Prompting vs RAG vs Fine-tuning</div><div class="bh-sub">Choosing your knowledge injection strategy</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="diagram"><pre style="font-size:12px;line-height:1.7">
+Does the model already have the knowledge?
+│
+├── YES → Does the output format/style need to change?
+│          ├── NO  → ✅ Just prompt it (zero-shot or few-shot)
+│          └── YES → ✅ Few-shot prompting or light SFT fine-tuning
+│
+└── NO  → Is the missing knowledge in documents / a database?
+           ├── YES → ✅ RAG (retrieve relevant chunks, pass as context)
+           └── NO  → Is it a new skill/behaviour the model lacks entirely?
+                      ├── YES (small data &lt;10K examples)  → ✅ LoRA / QLoRA fine-tune
+                      └── YES (large data, new domain)    → ✅ Full fine-tune or continued pre-train
+    </pre></div>
+
+    <table class="dec-table">
+      <tr><th>Technique</th><th>Use when</th><th>Skip when</th><th>Cost</th></tr>
+      <tr><td>Zero-shot prompting</td><td>Model knows it; clear instruction is enough</td><td>Output format is critical; task is ambiguous</td><td>Free</td></tr>
+      <tr><td>Few-shot prompting</td><td>Format-sensitive task; 2–5 examples in context</td><td>Prompt gets too long (expensive); examples change often</td><td>Extra input tokens</td></tr>
+      <tr><td>RAG</td><td>Private data, current events, large knowledge base, citable answers</td><td>Knowledge fits in context; query is not information-seeking</td><td>Infra + embedding API</td></tr>
+      <tr><td>LoRA / QLoRA fine-tune</td><td>Domain tone/style, structured output, specialised task, slow-changing knowledge</td><td>Knowledge changes frequently; you have no labelled data</td><td>GPU time, one-off</td></tr>
+      <tr><td>Full fine-tune</td><td>Maximum quality, new language/domain, multi-task specialisation</td><td>You have &lt;1K examples or limited GPU budget</td><td>High (8×A100)</td></tr>
+      <tr><td>RAG + fine-tune</td><td>Need domain tone AND current data (e.g. medical chatbot)</td><td>Adds complexity — only when each alone is insufficient</td><td>Both costs</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Use RAG when</div>
+        <ul>
+          <li>Answering questions about private / internal documents</li>
+          <li>Knowledge changes frequently (news, prices, inventory)</li>
+          <li>Users need cited, verifiable sources</li>
+          <li>Knowledge base is too large to fine-tune on</li>
+          <li>You want to add knowledge without any training cost</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Use Fine-tuning instead when</div>
+        <ul>
+          <li>Model needs a new output style/format permanently</li>
+          <li>Task requires speed and context stuffing is too slow</li>
+          <li>Knowledge is stable (doesn't change month-to-month)</li>
+          <li>You have 1K+ high-quality labelled examples</li>
+          <li>Latency is critical and retrieval step is unacceptable</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Start with prompting — it costs nothing and works for most tasks. Add RAG when the model lacks current or private knowledge. Reach for fine-tuning only when you need permanent behaviour change (style, format, specialised skill) that prompting cannot reliably produce. Most apps need prompting + RAG; very few need fine-tuning.</div>
+
+    <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:14px 18px;margin-top:14px;font-size:13px;color:#94a3b8">
+      <span style="font-weight:700;color:#22d3ee">📄 Building RAG over PDF documents?</span> PDFs introduce specific challenges not covered in standard RAG — multi-column layouts, embedded tables, scanned images, and inconsistent formatting require dedicated pre-processing. See <a href="rag-pdf.html" style="color:#22d3ee;font-weight:600">Module 11 · Multi-Modal PDF RAG</a> for the full 10-stage pipeline, content-type-specific solutions, and production architecture. For a quick summary, see <a href="rag-pdf-summary.html" style="color:#22d3ee">Module 12</a>.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 3: RAG Retrieval Strategy -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">3</div>
+    <div><div class="bh-title">Which RAG Retrieval Strategy</div><div class="bh-sub">Basic cosine · Hybrid BM25 · MMR · Multi-query · Reranker · GraphRAG</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="opt-grid">
+      <div class="opt-card" style="border-top:3px solid #4f8ef7">
+        <span class="opt-tag" style="background:rgba(79,142,247,.15);color:#4f8ef7">Basic Vector Search</span>
+        <div class="opt-name">Cosine similarity top-k</div>
+        <div class="opt-when">Small corpus (&lt;10K docs), clear well-formed queries, good baseline to start. Simple to implement, no extra infra.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #22c55e">
+        <span class="opt-tag" style="background:rgba(34,197,94,.15);color:#22c55e">Hybrid Search</span>
+        <div class="opt-name">BM25 + vector (RRF merge)</div>
+        <div class="opt-when">Queries contain exact product names, codes, or IDs. Mix of fuzzy semantic queries and exact-match keyword queries. <strong>+15-20% quality over pure vector</strong>.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #a78bfa">
+        <span class="opt-tag" style="background:rgba(167,139,250,.15);color:#a78bfa">MMR Retrieval</span>
+        <div class="opt-name">Maximal Marginal Relevance</div>
+        <div class="opt-when">Need diverse retrieved chunks (not 5 near-identical paragraphs). Long-form synthesis tasks. Document coverage over depth.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f59e0b">
+        <span class="opt-tag" style="background:rgba(245,158,11,.15);color:#f59e0b">Multi-Query</span>
+        <div class="opt-name">LLM generates 3 sub-queries</div>
+        <div class="opt-when">Short or ambiguous user queries ("tell me about our policy"). Different phrasings retrieve different but relevant documents. <strong>Best for vague Q&amp;A</strong>.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #22d3ee">
+        <span class="opt-tag" style="background:rgba(34,211,238,.15);color:#22d3ee">Cross-Encoder Reranker</span>
+        <div class="opt-name">Retrieve 50 → rerank → top 5</div>
+        <div class="opt-when">High-precision required (legal, medical, financial). Can afford +0.3-0.5s latency. Biggest quality jump for the least complexity. <strong>Always add to production RAG</strong>.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f472b6">
+        <span class="opt-tag" style="background:rgba(244,114,182,.15);color:#f472b6">GraphRAG</span>
+        <div class="opt-name">Knowledge graph + vector</div>
+        <div class="opt-when">Multi-hop questions that span multiple documents ("What is the relationship between X and Y from these docs?"). Complex interconnected knowledge bases.</div>
+      </div>
+    </div>
+
+    <table class="dec-table">
+      <tr><th>Your situation</th><th>Recommended retrieval</th></tr>
+      <tr><td>MVP / prototype, need something working today</td><td>Basic cosine top-k</td></tr>
+      <tr><td>Queries include model numbers, product IDs, exact names</td><td>Hybrid (BM25 + vector)</td></tr>
+      <tr><td>Users ask vague 1-5 word questions</td><td>Multi-query expansion</td></tr>
+      <tr><td>Top-k returns 5 paragraphs saying the same thing</td><td>MMR retrieval</td></tr>
+      <tr><td>Going to production — quality matters most</td><td>Hybrid + cross-encoder reranker</td></tr>
+      <tr><td>Questions require connecting facts across documents</td><td>GraphRAG or multi-hop retrieval</td></tr>
+      <tr><td>Need to filter by date, author, category before ranking</td><td>Metadata pre-filter + vector search</td></tr>
+      <tr><td>Source documents are PDFs with tables, images, or scanned pages</td><td>Multi-modal pipeline → see <a href="rag-pdf.html" style="color:#22d3ee">Module 11 · PDF RAG</a></td></tr>
+    </table>
+
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> For production, always combine at least two: hybrid search (vector + BM25) covers both semantic and exact-match cases, and a cross-encoder reranker ensures the most relevant chunk reaches the top. That combination alone gives 20-30% quality improvement over basic cosine search with minimal extra infrastructure.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 4: Fine-tuning Method -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">4</div>
+    <div><div class="bh-title">Which Fine-tuning Method</div><div class="bh-sub">Full fine-tune · LoRA · QLoRA · SFT · DPO · GRPO · RLHF</div></div>
+  </div>
+  <div class="block-body">
+
+    <table class="dec-table">
+      <tr><th>Method</th><th>Use when</th><th>VRAM needed</th><th>Data needed</th></tr>
+      <tr><td>Full fine-tuning</td><td>Maximum quality; multi-task; new domain from scratch; have A100 cluster</td><td>~98 GB (7B model)</td><td>10K–1M examples</td></tr>
+      <tr><td>LoRA (fp16 base)</td><td>Domain adaptation on mid-range GPU; base model stays useful</td><td>~20–30 GB (7B)</td><td>500–50K examples</td></tr>
+      <tr><td>QLoRA (4-bit base)</td><td>Consumer GPU (&lt;16GB VRAM); first fine-tune; privacy (no cloud)</td><td>~8–12 GB (7B)</td><td>100–10K examples</td></tr>
+      <tr><td>SFT (Supervised Fine-Tuning)</td><td>Teaching format, new task, instruction following, domain tone</td><td>Depends on method above</td><td>(instruction, response) pairs</td></tr>
+      <tr><td>DPO (Direct Preference Opt.)</td><td>Style alignment, safety, reducing unwanted outputs; after SFT</td><td>2× model size</td><td>(prompt, chosen, rejected) triples</td></tr>
+      <tr><td>GRPO / RLVR</td><td>Reasoning, math, code — tasks with <em>verifiable</em> correct answers</td><td>1–2× model size</td><td>Problems + automatic verifier</td></tr>
+      <tr><td>RLHF (PPO)</td><td>Maximum alignment quality; frontier model production; large team</td><td>4× model size</td><td>Human preference labels + RM</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Use QLoRA when</div>
+        <ul>
+          <li>GPU has ≤ 16 GB VRAM (RTX 4080/4090)</li>
+          <li>First fine-tuning attempt — low risk to experiment</li>
+          <li>Base model must stay usable (adapter is swappable)</li>
+          <li>Multiple fine-tuned variants needed (one base, many adapters)</li>
+          <li>Training data is 100–10,000 examples</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Use Full Fine-tuning instead when</div>
+        <ul>
+          <li>Adapting an entirely new language or script</li>
+          <li>Training on 1M+ examples where adapter capacity is bottleneck</li>
+          <li>Need absolute maximum task performance</li>
+          <li>Doing instruction-tuning from scratch (base → instruct)</li>
+          <li>Multi-task training over many diverse objectives</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="wtu-grid" style="margin-top:10px">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Use DPO when</div>
+        <ul>
+          <li>Model follows instructions but tone/style is wrong</li>
+          <li>Need to reduce refusals or unsafe outputs</li>
+          <li>Have (prompt, good-response, bad-response) triples</li>
+          <li>Already have an SFT model as starting point</li>
+          <li>Want stability — DPO is far more stable than PPO</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">✅ Use GRPO instead when</div>
+        <ul>
+          <li>Task has verifiable correct answers (math, code, logic)</li>
+          <li>Want to train reasoning ability (like DeepSeek-R1)</li>
+          <li>No human labellers — auto-verifier is enough</li>
+          <li>Want to avoid reward model training entirely</li>
+          <li>Scaling alignment to millions of examples cheaply</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> 90% of fine-tuning projects should start with QLoRA — it runs on a consumer GPU, produces near full fine-tune quality, and is low-risk to experiment with. For alignment: use DPO if you have preference pairs and want safety/style tuning; use GRPO if your task has verifiable answers and you want to build reasoning capability.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 5: Agent vs Chain Pattern -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">5</div>
+    <div><div class="bh-title">Direct Call vs Chain vs Agent vs Multi-Agent</div><div class="bh-sub">Choosing the right orchestration pattern</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="opt-grid">
+      <div class="opt-card" style="border-top:3px solid #22d3ee">
+        <span class="opt-tag" style="background:rgba(34,211,238,.15);color:#22d3ee">Direct API Call</span>
+        <div class="opt-when">Single-turn task, no tools needed, predictable output. Simplest and fastest. Use for summarisation, classification, Q&amp;A with all context in prompt.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #3ecf8e">
+        <span class="opt-tag" style="background:rgba(62,207,142,.15);color:#3ecf8e">LCEL Chain</span>
+        <div class="opt-when">Fixed multi-step pipeline. Steps are always the same, in the same order. Use for RAG (retrieve → prompt → generate → parse), templated document generation.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f59e0b">
+        <span class="opt-tag" style="background:rgba(245,158,11,.15);color:#f59e0b">ReAct Agent</span>
+        <div class="opt-when">Dynamic tool use — the model decides which tools to call. Number of steps is unknown at design time. Use for research assistants, search-based Q&amp;A, data exploration.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #a78bfa">
+        <span class="opt-tag" style="background:rgba(167,139,250,.15);color:#a78bfa">LangGraph Agent</span>
+        <div class="opt-when">Complex state, loops, branching, human-in-the-loop approval. Need explicit control over agent flow. Use for multi-step workflows with conditional paths and checkpoints.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f472b6">
+        <span class="opt-tag" style="background:rgba(244,114,182,.15);color:#f472b6">Multi-Agent</span>
+        <div class="opt-when">Task is too complex or long for one agent's context window. Benefits from parallel specialised sub-agents (researcher + coder + writer). A2A for cross-framework coordination.</div>
+      </div>
+    </div>
+
+    <table class="dec-table">
+      <tr><th>Scenario</th><th>Pattern</th><th>Reason</th></tr>
+      <tr><td>Summarise a document</td><td>Direct call</td><td>Single step, all context fits in prompt</td></tr>
+      <tr><td>Answer questions from a knowledge base</td><td>LCEL RAG chain</td><td>Fixed steps: retrieve → prompt → answer</td></tr>
+      <tr><td>Research assistant that searches and synthesises</td><td>ReAct agent</td><td>Unknown number of search steps needed</td></tr>
+      <tr><td>Code assistant that writes, runs tests, fixes bugs</td><td>LangGraph</td><td>Loop (write → test → fix) with conditional exit</td></tr>
+      <tr><td>Full software project: plan, code, review, deploy</td><td>Multi-agent supervisor</td><td>Parallel specialised agents; exceeds single context</td></tr>
+      <tr><td>Data pipeline: collect → clean → analyse → report</td><td>LangGraph with checkpoints</td><td>Long pipeline, need to resume on failure</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Add agents when</div>
+        <ul>
+          <li>Number of steps is unknown at design time</li>
+          <li>Task requires real-world tool use (search, code execution, API calls)</li>
+          <li>Human approval is needed before destructive actions</li>
+          <li>Task needs to resume across sessions (checkpointing)</li>
+          <li>Multiple specialised skills are required in one workflow</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Avoid agents when</div>
+        <ul>
+          <li>A fixed chain already solves the task reliably</li>
+          <li>Latency is critical (agents add multiple LLM round-trips)</li>
+          <li>Task is high-stakes and unpredictable agent paths are risky</li>
+          <li>No tools are needed — direct call is always faster</li>
+          <li>You have no max_iterations guard — loops are dangerous without limits</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Use the simplest pattern that solves the problem. Direct calls for one-shot tasks. Chains for fixed pipelines. Agents only when the model genuinely needs to decide what to do next. Every step up in complexity adds latency, unpredictability, and debugging difficulty — only pay that cost when simpler patterns cannot handle the task.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 6: Inference Optimisation -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">6</div>
+    <div><div class="bh-title">Inference Optimisation Techniques</div><div class="bh-sub">Speculative decoding · FlashAttention · Quantization · KV cache · Batching</div></div>
+  </div>
+  <div class="block-body">
+
+    <table class="dec-table">
+      <tr><th>Technique</th><th>Use when</th><th>Skip when</th><th>Gain</th></tr>
+      <tr><td>Quantization (INT4/INT8)</td><td>VRAM is the bottleneck; consumer GPU; edge/mobile deployment</td><td>Quality is critical and accuracy loss matters; using API (handled by provider)</td><td>4-8× memory reduction, 3-7% quality loss</td></tr>
+      <tr><td>Speculative Decoding</td><td>Latency is critical; same-family draft+target; long outputs</td><td>High-diversity outputs (draft acceptance drops); batched serving with mixed prompts</td><td>2-3× faster generation</td></tr>
+      <tr><td>FlashAttention 2/3</td><td>Context &gt; 4K tokens; training or inference; any serious inference stack</td><td>You're using a provider API (they already use it); very short sequences</td><td>2-4× faster attention, linear memory</td></tr>
+      <tr><td>Paged Attention (vLLM)</td><td>Self-hosted serving; many concurrent users; variable output lengths</td><td>Single-user local use; Ollama already handles this</td><td>Up to 24× throughput vs naive</td></tr>
+      <tr><td>Semantic Caching</td><td>Many users ask similar questions (FAQ, support bot, search)</td><td>Every query is unique; real-time data where cache is always stale</td><td>80-95% cache hit rate → near-zero latency</td></tr>
+      <tr><td>Prompt Caching</td><td>Long system prompt reused across many calls (OpenAI/Anthropic support)</td><td>System prompt changes per request</td><td>~50% input token cost reduction</td></tr>
+      <tr><td>Batching (server-side)</td><td>Throughput matters more than per-request latency; offline processing</td><td>Real-time interactive use; latency SLA is tight</td><td>2-10× throughput improvement</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Quantize to INT4 when</div>
+        <ul>
+          <li>Running a 7B+ model on ≤ 16 GB VRAM</li>
+          <li>Deploying to mobile or browser (Transformers.js)</li>
+          <li>Task is language-level (chat, summarise) not precision math</li>
+          <li>Want to run larger models on available hardware</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Keep full precision when</div>
+        <ul>
+          <li>Fine-tuning (quantization during training degrades gradients)</li>
+          <li>Scientific / numeric output where 3-7% error matters</li>
+          <li>Using API provider (quantization is their concern)</li>
+          <li>Embedding models (precision affects similarity scores)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> If you're self-hosting, always use FlashAttention (it's free) and quantize if VRAM is tight. Add semantic caching if many users ask similar questions — it's the single highest-ROI optimisation for production apps. Speculative decoding gives real latency wins but only when the draft and target models share training distribution.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 7: Architecture Choice -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">7</div>
+    <div><div class="bh-title">Which Model Architecture</div><div class="bh-sub">Decoder-only · Encoder-only · Encoder-Decoder · MoE · SSM · Hybrid</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="opt-grid">
+      <div class="opt-card" style="border-top:3px solid #4f8ef7">
+        <span class="opt-tag" style="background:rgba(79,142,247,.15);color:#4f8ef7">Decoder-only (GPT/Llama)</span>
+        <div class="opt-when">Text generation, chatbots, code generation, creative writing. Causal attention — reads left-to-right. The dominant architecture for everything generative.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #22d3ee">
+        <span class="opt-tag" style="background:rgba(34,211,238,.15);color:#22d3ee">Encoder-only (BERT)</span>
+        <div class="opt-when">Classification, NER, sentence similarity, semantic search embeddings. Bidirectional attention — sees full sentence. NOT for generating text.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #3ecf8e">
+        <span class="opt-tag" style="background:rgba(62,207,142,.15);color:#3ecf8e">Encoder-Decoder (T5/BART)</span>
+        <div class="opt-when">Translation, summarisation, question generation, text transformation. Encoder reads full input, decoder generates output. Seq-to-seq tasks.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #facc15">
+        <span class="opt-tag" style="background:rgba(250,204,21,.15);color:#facc15">MoE (Mixtral/DeepSeek)</span>
+        <div class="opt-when">Data-centre serving where quality-per-FLOP matters. Mixed domain tasks. Large cluster with GPU interconnect. Not suitable for consumer GPU deployment.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f472b6">
+        <span class="opt-tag" style="background:rgba(244,114,182,.15);color:#f472b6">SSM / Mamba / RWKV</span>
+        <div class="opt-when">Very long sequences (&gt;32K tokens) where transformer OOMs. Streaming data (audio, genomics, time-series). When throughput &gt; precise long-range recall.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #a78bfa">
+        <span class="opt-tag" style="background:rgba(167,139,250,.15);color:#a78bfa">Hybrid (Jamba/Zamba)</span>
+        <div class="opt-when">Long context AND precise recall needed. Combines SSM (efficiency at scale) with attention layers (exact recall). Best of both at extra architectural complexity.</div>
+      </div>
+    </div>
+
+    <table class="dec-table">
+      <tr><th>Task</th><th>Architecture</th><th>Example models</th></tr>
+      <tr><td>Chatbot, code assistant, creative writing</td><td>Decoder-only</td><td>GPT-4o, Llama-3, Mistral, Claude</td></tr>
+      <tr><td>Sentence similarity / embedding for RAG</td><td>Encoder-only</td><td>BERT, nomic-embed, BGE, E5</td></tr>
+      <tr><td>Summarisation, translation</td><td>Encoder-Decoder or Decoder-only</td><td>T5, BART, FLAN-T5, Claude (decoder)</td></tr>
+      <tr><td>High-quality serving with GPU cluster</td><td>MoE</td><td>Mixtral 8×7B, DeepSeek-V3, GPT-4</td></tr>
+      <tr><td>100K+ token documents, streaming inference</td><td>SSM or Hybrid</td><td>Mamba, RWKV, Jamba</td></tr>
+      <tr><td>On-device mobile inference</td><td>Tiny decoder-only (quantised)</td><td>Phi-3.5-Mini, SmolLM2, Llama-3.2-1B</td></tr>
+    </table>
+
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> For building apps today: use a decoder-only model (Llama, Mistral, GPT) for everything generative, and an encoder-only model (BERT, BGE) only if you need embeddings for semantic search. MoE, SSM, and hybrid architectures are mostly server-side concerns — you interact with them via API and the architecture is transparent to your code.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 8: Deployment Target -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">8</div>
+    <div><div class="bh-title">Where to Deploy / Run Models</div><div class="bh-sub">Managed API · Self-hosted · Ollama · Transformers.js · Edge</div></div>
+  </div>
+  <div class="block-body">
+
+    <table class="dec-table">
+      <tr><th>Option</th><th>Use when</th><th>Avoid when</th><th>Cost model</th></tr>
+      <tr><td>OpenAI / Anthropic API</td><td>Best quality needed; no infra budget; fastest to production; GPT-4o, Claude</td><td>Data cannot leave your org; very high volume (&gt;10M tokens/day); need custom models</td><td>Per token (input + output)</td></tr>
+      <tr><td>HuggingFace Inference API</td><td>Access open models (Llama, Mistral) without GPU; serverless; prototyping</td><td>Latency-critical (cold starts); very long inference; high sustained throughput</td><td>Per request or subscription</td></tr>
+      <tr><td>Ollama (local)</td><td>Development; private data; no API cost; offline; testing open models</td><td>Production serving at scale; multiple concurrent users; remote access</td><td>Free (your hardware)</td></tr>
+      <tr><td>vLLM / TGI (self-hosted)</td><td>Production serving; full control; high throughput; custom models; GPU cluster</td><td>Small team without MLOps expertise; sporadic traffic (idle GPU costs money)</td><td>GPU instance hours</td></tr>
+      <tr><td>Transformers.js (browser/Node)</td><td>Offline apps; browser-based; no API key; privacy; mobile PWA; education</td><td>Models &gt;1-2B params (too large for browser); low-powered devices</td><td>Free (user's device)</td></tr>
+      <tr><td>Cloudflare Workers AI / Vercel AI</td><td>Edge deployment close to users; serverless; low cold-start latency; small models</td><td>Large models; sustained high throughput; need GPU-heavy models</td><td>Per token / request</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Self-host when</div>
+        <ul>
+          <li>Data privacy regulations (HIPAA, GDPR) prevent sending data to third parties</li>
+          <li>Volume is high enough that API cost &gt; server cost (~10M+ tokens/day)</li>
+          <li>Need custom fine-tuned models not available via API</li>
+          <li>Latency SLA requires &lt;100ms first token (no network round-trip)</li>
+          <li>You need full control over model version and behaviour</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">✅ Use managed API when</div>
+        <ul>
+          <li>Building an MVP or prototype — ship in hours not weeks</li>
+          <li>Team lacks ML infrastructure expertise</li>
+          <li>Traffic is unpredictable — pay-per-use scales automatically</li>
+          <li>Need frontier models (GPT-4o, Claude 3.5) — not available to self-host</li>
+          <li>No compliance requirement preventing external API use</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Start with a managed API — zero infra, best models, ships in hours. Move to self-hosted (Ollama locally, vLLM in production) when data privacy mandates it or when API costs exceed hosting costs at your volume. Transformers.js is the right choice when the app must work offline or in the browser without any server.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 9: Production Tooling -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">9</div>
+    <div><div class="bh-title">Production Tooling &amp; Protocols</div><div class="bh-sub">LangSmith · MCP · A2A · Caching · Guardrails</div></div>
+  </div>
+  <div class="block-body">
+
+    <div class="opt-grid">
+      <div class="opt-card" style="border-top:3px solid #22d3ee">
+        <span class="opt-tag" style="background:rgba(34,211,238,.15);color:#22d3ee">LangSmith</span>
+        <div class="opt-when">Any production LLM app. Traces every call, evaluates quality, tracks costs. <strong>Add on Day 1</strong> — you will need it when debugging goes wrong.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #a78bfa">
+        <span class="opt-tag" style="background:rgba(167,139,250,.15);color:#a78bfa">MCP Servers</span>
+        <div class="opt-when">When Claude or another MCP client needs to read/write external data (GitHub, databases, file systems) without custom integration code per tool.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f472b6">
+        <span class="opt-tag" style="background:rgba(244,114,182,.15);color:#f472b6">A2A Protocol</span>
+        <div class="opt-when">When multiple agents from different teams, frameworks, or companies need to collaborate on tasks. Standardises inter-agent task delegation and result streaming.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #3ecf8e">
+        <span class="opt-tag" style="background:rgba(62,207,142,.15);color:#3ecf8e">Semantic Cache</span>
+        <div class="opt-when">FAQ bots, customer support, search — any app where many users ask similar questions. Cache by embedding similarity. 80-95% cache hit rates possible.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #f59e0b">
+        <span class="opt-tag" style="background:rgba(245,158,11,.15);color:#f59e0b">Input / Output Guards</span>
+        <div class="opt-when">Public-facing apps where users can inject malicious prompts. Classify inputs before sending to LLM. Validate structured outputs against schema. Always required for production.</div>
+      </div>
+      <div class="opt-card" style="border-top:3px solid #ef4444">
+        <span class="opt-tag" style="background:rgba(239,68,68,.15);color:#ef4444">Circuit Breaker</span>
+        <div class="opt-when">When primary model has availability or latency issues. Fall back to a cheaper/smaller model automatically. Prevents cascading failure across your app.</div>
+      </div>
+    </div>
+
+    <table class="dec-table">
+      <tr><th>You need to…</th><th>Tool / Pattern</th></tr>
+      <tr><td>Debug why the LLM gave a wrong answer last Tuesday</td><td>LangSmith traces</td></tr>
+      <tr><td>Evaluate quality after a prompt or model change</td><td>LangSmith evaluations + dataset</td></tr>
+      <tr><td>Let Claude read your company's GitHub repos without custom code</td><td>MCP server (modelcontextprotocol/server-github)</td></tr>
+      <tr><td>Coordinate a research agent and a writing agent built by different teams</td><td>A2A protocol (Agent Cards + tasks/send)</td></tr>
+      <tr><td>Cut API costs when 70% of queries are similar</td><td>Semantic cache (embed query, cache hit by similarity)</td></tr>
+      <tr><td>Stop users from injecting "ignore all previous instructions"</td><td>Input classifier guard (detect injection before LLM call)</td></tr>
+      <tr><td>Ensure LLM always returns valid JSON schema</td><td>Output validator (Zod) + retry on parse failure</td></tr>
+      <tr><td>Handle primary model outage without app downtime</td><td>Circuit breaker → fallback to GPT-4o-mini or local SLM</td></tr>
+    </table>
+
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Every production LLM app needs three things: LangSmith for observability (you cannot debug what you cannot see), input/output validation at system boundaries, and retry/fallback logic for API failures. Add MCP when your model needs external tools; add A2A when agents from different systems need to collaborate.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- BLOCK 10: Prompt Engineering Technique -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">10</div>
+    <div><div class="bh-title">Which Prompt Engineering Technique</div><div class="bh-sub">Zero-shot · Few-shot · CoT · ReAct · Self-consistency · ToT</div></div>
+  </div>
+  <div class="block-body">
+
+    <table class="dec-table">
+      <tr><th>Technique</th><th>Use when</th><th>When to skip</th></tr>
+      <tr><td>Zero-shot</td><td>Simple, clear task. Model has the knowledge. No special format needed.</td><td>Output is consistently wrong or in wrong format.</td></tr>
+      <tr><td>Few-shot (2–5 examples)</td><td>Format-sensitive output (JSON, tables, structured text). Domain-specific style. Classification with custom labels.</td><td>Examples themselves are too long (wastes context). Examples change per request.</td></tr>
+      <tr><td>Chain-of-Thought (CoT)</td><td>Multi-step math, logic puzzles, code debugging. Any task where one wrong step fails the answer. Add "think step by step".</td><td>Simple factual recall — CoT adds noise. Latency-critical.</td></tr>
+      <tr><td>Self-consistency</td><td>Ambiguous reasoning. Generate N answers (temperature &gt; 0), take majority vote. Improves reliability at cost of N× API calls.</td><td>Deterministic tasks. Cost-sensitive. When temperature=0 is required.</td></tr>
+      <tr><td>ReAct (Reason + Act)</td><td>Multi-step tasks that need tool use. Model alternates: thought → action → observation. Used in agents (see Block 5).</td><td>No tools involved. Simple single-turn tasks.</td></tr>
+      <tr><td>Tree of Thought (ToT)</td><td>Complex problems with multiple valid paths. Model explores, evaluates, and backtracks. Research tasks, strategy problems.</td><td>Most production apps — overhead is high. Simpler CoT usually suffices.</td></tr>
+      <tr><td>Role prompting</td><td>"You are a senior security engineer…" — improves domain-specific output quality and tone. Useful when domain expertise in response matters.</td><td>Generic tasks where role adds no value. Can introduce unwanted persona bias.</td></tr>
+      <tr><td>Output format constraint</td><td>"Respond ONLY as a JSON object with keys: name, age, city." — critical for any downstream parsing.</td><td>When flexibility in response structure is acceptable.</td></tr>
+    </table>
+
+    <div class="wtu-grid">
+      <div class="wtu-col wtu-use">
+        <div class="wtu-col-label use-label">✅ Always include</div>
+        <ul>
+          <li><strong>Delimiters</strong> around user input: use <code>"""</code> or XML tags to prevent prompt injection</li>
+          <li><strong>Output format</strong> instruction when downstream parsing is needed</li>
+          <li><strong>Negative constraint</strong> if there are known failure modes: "Do not include code", "Never make up citations"</li>
+          <li><strong>Context boundary</strong> — tell the model explicitly what information it has and does not have</li>
+        </ul>
+      </div>
+      <div class="wtu-col wtu-skip">
+        <div class="wtu-col-label skip-label">❌ Common prompt mistakes</div>
+        <ul>
+          <li>Overloading system prompt with 5,000+ tokens of instructions — model ignores middle</li>
+          <li>Asking multiple unrelated tasks in one prompt — split into separate calls</li>
+          <li>Using vague verbs: "improve", "fix", "enhance" without criteria</li>
+          <li>Assuming the model remembers previous conversations — it does not</li>
+          <li>Not testing at temperature=0 first — add randomness only if needed</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Zero-shot first — it works surprisingly often. If format is critical, add 2–3 few-shot examples. If accuracy on multi-step problems is low, add "think step by step" (CoT). Everything beyond that (ToT, self-consistency) is for hard edge cases. The prompt engineering hierarchy: zero-shot → few-shot → CoT → agents → fine-tuning.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- MEGA REFERENCE TABLE -->
+<!-- ═══════════════════════════════════════ -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(192,132,252,.2);color:#c084fc">★</div>
+    <div><div class="bh-title">Master Decision Table — All Scenarios at a Glance</div><div class="bh-sub">Quick-reference for the most common real-world decisions</div></div>
+  </div>
+  <div class="block-body">
+    <table class="dec-table">
+      <tr><th>Scenario / Constraint</th><th>Decision</th><th>Module ref.</th></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Model Selection</td></tr>
+      <tr><td>Summarise / classify / extract at scale</td><td>Fine-tuned SLM (3–7B) or GPT-4o-mini</td><td>M1, M7</td></tr>
+      <tr><td>Multi-step math / competitive coding</td><td>o3, o4-mini, or DeepSeek-R1</td><td>M1, M8</td></tr>
+      <tr><td>On-device / offline (mobile, browser)</td><td>Llama-3.2-1B or SmolLM2 via Transformers.js</td><td>M7, M8</td></tr>
+      <tr><td>Semantic search / RAG retrieval</td><td>Dedicated embedding model (BGE, nomic-embed)</td><td>M2, M4</td></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Knowledge &amp; Data</td></tr>
+      <tr><td>Answering from private company docs</td><td>RAG (hybrid + reranker)</td><td>M4</td></tr>
+      <tr><td>Model needs a new output style permanently</td><td>QLoRA fine-tune (SFT)</td><td>M7, M9</td></tr>
+      <tr><td>Model gives wrong style/tone despite prompting</td><td>DPO fine-tune on preference pairs</td><td>M7, M9</td></tr>
+      <tr><td>Improve reasoning on math/code problems</td><td>GRPO or RLVR training</td><td>M7, M8</td></tr>
+      <tr><td>Knowledge changes every day (news, prices)</td><td>RAG — do NOT fine-tune for dynamic knowledge</td><td>M4</td></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Architecture &amp; Infrastructure</td></tr>
+      <tr><td>Long context (&gt;32K tokens), streaming</td><td>Mamba/SSM or FlashAttention + sliding window</td><td>M2, M8, M9</td></tr>
+      <tr><td>Multi-domain, high quality, data-center GPU</td><td>MoE model (Mixtral, DeepSeek-V3)</td><td>M8, M9</td></tr>
+      <tr><td>VRAM constrained, consumer GPU</td><td>Quantized (INT4/INT8) dense model</td><td>M7</td></tr>
+      <tr><td>Low latency for large model output</td><td>Speculative decoding (draft model)</td><td>M8, M9</td></tr>
+      <tr><td>Long context at training/inference</td><td>FlashAttention 2/3 (free, just enable it)</td><td>M8, M9</td></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Agent Patterns</td></tr>
+      <tr><td>Fixed steps: retrieve → prompt → answer</td><td>LCEL Chain</td><td>M4, M5</td></tr>
+      <tr><td>Dynamic tool use, research assistant</td><td>ReAct Agent</td><td>M5</td></tr>
+      <tr><td>Complex state, loops, human approval</td><td>LangGraph with checkpointer</td><td>M5</td></tr>
+      <tr><td>Multi-team / multi-framework collaboration</td><td>A2A Protocol (Agent Cards)</td><td>M6</td></tr>
+      <tr><td>Agent needs external tools / data</td><td>MCP server</td><td>M6</td></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Deployment &amp; Cost</td></tr>
+      <tr><td>MVP / prototype, ship in hours</td><td>Managed API (OpenAI, Anthropic)</td><td>M3</td></tr>
+      <tr><td>Data cannot leave org (privacy/compliance)</td><td>Self-hosted (vLLM, Ollama) or on-device</td><td>M7, M8</td></tr>
+      <tr><td>70%+ of queries are similar (FAQ, support)</td><td>Semantic cache — biggest cost ROI</td><td>M6</td></tr>
+      <tr><td>Long system prompt repeated every call</td><td>Prompt caching (OpenAI/Anthropic feature)</td><td>M3, M6</td></tr>
+      <tr><td>Primary API goes down or is slow</td><td>Circuit breaker → fallback model</td><td>M6</td></tr>
+      <tr><td>Need to debug production LLM behaviour</td><td>LangSmith tracing (add Day 1)</td><td>M6</td></tr>
+
+      <tr><td colspan="3" style="background:rgba(192,132,252,.08);color:#c084fc;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Prompting</td></tr>
+      <tr><td>Output format must be exact (JSON, table)</td><td>Few-shot + output format constraint + Zod validation</td><td>M3</td></tr>
+      <tr><td>Multi-step math or logic task</td><td>Chain-of-Thought ("think step by step")</td><td>M3</td></tr>
+      <tr><td>Ambiguous task, want reliable answer</td><td>Self-consistency (N samples, majority vote)</td><td>M3</td></tr>
+      <tr><td>User input may contain injection attacks</td><td>Delimiters + input classifier guard</td><td>M3, M6</td></tr>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Bookmark this table. When a new task arrives, scan the relevant row and you immediately know which technique to reach for and which module explains it in depth. The column "Module ref." links back to the detailed guide — M1 = Foundations, M2 = Architecture, M3 = API, M4 = RAG, M5 = Agents, M6 = Production, M7 = Fine-tuning, M8 = Trends, M9 = Compare.</div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 10 of 12 — ← <a href="comparison.html" style="color:#c084fc">Module 9 · Comparison</a> | <a href="rag-pdf.html" style="color:#22d3ee">Module 11 · PDF RAG →</a></footer>
+</body>
+</html>

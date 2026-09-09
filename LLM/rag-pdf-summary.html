@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Multi-Modal RAG with PDFs — Summary</title>
+<style>
+  :root {
+    --bg: #1a1d24;
+    --surface: #232932;
+    --surface2: #2c3139;
+    --border: #3a3f4a;
+    --accent-blue: #6b8db8;
+    --accent-green: #7a9b8f;
+    --accent-orange: #a6844a;
+    --accent-red: #9b6b6b;
+    --accent-purple: #8b7fa6;
+    --accent-cyan: #6b94a6;
+    --accent-pink: #a68899;
+    --text: #d9dde3;
+    --text-muted: #8b95a3;
+    --text-dim: #6b7580;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #232932 0%, #1a1d24 50%, #232932 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 32px 40px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(107,141,184,.12);
+    border: 1px solid rgba(107,141,184,.3);
+    color: var(--accent-blue);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(24px,4vw,40px);
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .hero p {
+    color: var(--text-muted);
+    font-size: 16px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 48px 0 32px; }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .section-subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  @media(max-width:900px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .card.blue::before   { background: var(--accent-blue); }
+  .card.green::before  { background: var(--accent-green); }
+  .card.orange::before { background: var(--accent-orange); }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .content-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .content-list li {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .content-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+  }
+
+  .flow-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .flow-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .flow-step {
+    font-weight: 700;
+    color: var(--accent-blue);
+    min-width: 24px;
+  }
+  .flow-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width:700px) { .comparison { grid-template-columns: 1fr; } }
+  .comp-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .comp-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .comp-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .comp-list li {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding-left: 14px;
+    position: relative;
+  }
+  .comp-list li::before {
+    position: absolute;
+    left: 0;
+  }
+  .comp-col:first-child .comp-list li::before { content: '✗'; color: var(--accent-red); }
+  .comp-col:last-child .comp-list li::before { content: '✓'; color: var(--accent-green); }
+
+  .edge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .edge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    font-size: 12px;
+  }
+  .edge-title {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .edge-desc {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .edge-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .badge-high { background: rgba(155,107,107,.15); color: #9b6b6b; }
+  .badge-med { background: rgba(166,132,74,.15); color: #a6844a; }
+  .badge-low { background: rgba(122,155,143,.15); color: #7a9b8f; }
+
+  footer {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<nav style="background:#1a1d24;border-bottom:1px solid #3a3f4a;padding:10px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px">
+  <a href="index.html" style="color:#64748b;text-decoration:none">🏠 Home</a><span style="color:#3a3f4a">›</span>
+  <a href="how-llm-works.html" style="color:#64748b;text-decoration:none">0 · How It Works</a>
+  <a href="foundations.html" style="color:#64748b;text-decoration:none">1 · Foundations</a>
+  <a href="architecture.html" style="color:#64748b;text-decoration:none">2 · Architecture</a>
+  <a href="api-prompts.html" style="color:#64748b;text-decoration:none">3 · API</a>
+  <a href="rag-langchain.html" style="color:#64748b;text-decoration:none">4 · RAG</a>
+  <a href="agents.html" style="color:#64748b;text-decoration:none">5 · Agents</a>
+  <a href="production.html" style="color:#64748b;text-decoration:none">6 · Production</a>
+  <a href="open-source.html" style="color:#64748b;text-decoration:none">7 · Fine-tuning</a>
+  <a href="trends.html" style="color:#64748b;text-decoration:none">8 · Trends</a>
+  <a href="comparison.html" style="color:#64748b;text-decoration:none">9 · Compare</a>
+  <a href="when-to-use.html" style="color:#64748b;text-decoration:none">10 · When?</a>
+  <a href="rag-pdf.html" style="color:#64748b;text-decoration:none">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html" style="color:#06b6d4;text-decoration:none;background:rgba(6,182,212,.12);padding:3px 8px;border-radius:5px;border:1px solid rgba(6,182,212,.3)">12 · PDF Summary</a>
+</nav>
+
+<div class="hero">
+  <div style="display:inline-block;background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.4);color:#06b6d4;border-radius:999px;padding:3px 14px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Module 12 · Quick Reference Summary</div>
+  <div class="hero-badge">Architecture Summary</div>
+  <h1>Multi-Modal RAG with PDFs</h1>
+  <p>Building retrieval systems that handle text, tables, and images in PDF documents — challenges, solutions, and production patterns.</p>
+  <p style="font-size:12px;color:#64748b;margin-top:8px">Need the full deep-dive? See <a href="rag-pdf.html" style="color:#06b6d4">← Module 11 · Challenges, Solutions &amp; End-to-End Flow</a></p>
+</div>
+
+<section>
+  <div class="container">
+    <div class="section-title">📋 What This Covers</div>
+    <div class="section-subtitle">A comprehensive guide to modern RAG systems for complex documents</div>
+
+    <div class="grid-2">
+      <div class="card blue">
+        <div class="card-title">10-Stage Pipeline</div>
+        <ul class="content-list">
+          <li>User input &amp; PDF validation</li>
+          <li>PDF preprocessing &amp; classification</li>
+          <li>Multi-modal content extraction</li>
+          <li>Intelligent chunking strategies</li>
+          <li>Embedding generation</li>
+          <li>Vector store indexing</li>
+          <li>Query processing</li>
+          <li>Hybrid retrieval (dense + sparse)</li>
+          <li>LLM generation with guardrails</li>
+          <li>Answer output &amp; feedback loops</li>
+        </ul>
+      </div>
+
+      <div class="card green">
+        <div class="card-title">Core Challenges</div>
+        <ul class="content-list">
+          <li><strong>Text:</strong> Scanned PDFs, multi-column layouts, headers/footers</li>
+          <li><strong>Tables:</strong> Structure collapse, merged cells, multi-page spanning</li>
+          <li><strong>Images:</strong> Complete blindness to charts, diagrams, infographics</li>
+          <li><strong>Chunking:</strong> Fixed-size splits destroying context</li>
+          <li><strong>Embeddings:</strong> Semantic mismatches, multilingual gaps</li>
+          <li><strong>LLM:</strong> Hallucinations, lost-in-middle, citation errors</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<section>
+  <div class="container">
+    <div class="section-title">🔄 The Three-Track Architecture</div>
+    <div class="section-subtitle">Parallel pipelines for different content types</div>
+
+    <div class="grid-3">
+      <div class="card blue">
+        <div class="card-title">Track 1: Text Pipeline</div>
+        <ul class="content-list">
+          <li><strong>Extract:</strong> pdf-parse + OCR fallback</li>
+          <li><strong>Clean:</strong> strip headers/footers</li>
+          <li><strong>Chunk:</strong> semantic chunking</li>
+          <li><strong>Embed:</strong> text-embedding-3-large</li>
+          <li><strong>Index:</strong> dense + sparse</li>
+          <li><strong>Retrieve:</strong> hybrid RRF + rerank</li>
+        </ul>
+      </div>
+
+      <div class="card orange">
+        <div class="card-title">Track 2: Table Pipeline</div>
+        <ul class="content-list">
+          <li><strong>Detect:</strong> tabula-js + layout</li>
+          <li><strong>Reconstruct:</strong> merge multi-page</li>
+          <li><strong>Represent:</strong> Markdown + NL summary</li>
+          <li><strong>Embed:</strong> both representations</li>
+          <li><strong>Index:</strong> separate table index</li>
+          <li><strong>Retrieve:</strong> query-routed retrieval</li>
+        </ul>
+      </div>
+
+      <div class="card green">
+        <div class="card-title">Track 3: Image Pipeline</div>
+        <ul class="content-list">
+          <li><strong>Extract:</strong> render pages as PNG</li>
+          <li><strong>Describe:</strong> Vision LLM captions</li>
+          <li><strong>Embed:</strong> CLIP + caption embeddings</li>
+          <li><strong>Index:</strong> multi-modal vectors</li>
+          <li><strong>Retrieve:</strong> text-to-image search</li>
+          <li><strong>Return:</strong> images with captions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<section>
+  <div class="container">
+    <div class="section-title">⚙️ Key Solutions</div>
+    <div class="section-subtitle">What breaks in naive RAG and how to fix it</div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Scanned PDFs</div>
+          <ul class="comp-list">
+            <li>Returns garbled/empty text</li>
+            <li>No content extraction</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>OCR with layout analysis</li>
+            <li>AWS Textract / tesseract.js</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Table Structures</div>
+          <ul class="comp-list">
+            <li>Flattened to text stream</li>
+            <li>Row/column mapping lost</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>Structured extraction to Markdown/HTML</li>
+            <li>Natural language summary chunk</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Images &amp; Charts</div>
+          <ul class="comp-list">
+            <li>Completely ignored</li>
+            <li>No visual information indexed</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>Vision LLM generates captions</li>
+            <li>CLIP embeddings for visual search</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Fixed-Size Chunking</div>
+          <ul class="comp-list">
+            <li>Splits mid-sentence</li>
+            <li>Context destroyed</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>Semantic chunking on boundaries</li>
+            <li>Embedding similarity scoring</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Domain-Specific Terms</div>
+          <ul class="comp-list">
+            <li>General embeddings miss jargon</li>
+            <li>Poor retrieval on specialized vocab</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>Fine-tuned domain models</li>
+            <li>Hybrid BM25 retrieval</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="comp-col">
+          <div class="comp-label">Lost-in-the-Middle</div>
+          <ul class="comp-list">
+            <li>LLM ignores middle chunks</li>
+            <li>Context window issues</li>
+          </ul>
+        </div>
+        <div class="comp-col">
+          <div class="comp-label">Solution</div>
+          <ul class="comp-list">
+            <li>Cross-encoder reranking</li>
+            <li>Relevance-ordered formatting</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<section>
+  <div class="container">
+    <div class="section-title">🧪 Edge Cases to Handle</div>
+    <div class="section-subtitle">Production scenarios most tutorials skip</div>
+
+    <div class="edge-grid">
+      <div class="edge-card">
+        <div class="edge-badge badge-high">HIGH</div>
+        <div class="edge-title">Password-Protected PDFs</div>
+        <div class="edge-desc">Detection &amp; user password prompt needed or graceful skip with logging</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-high">HIGH</div>
+        <div class="edge-title">Multi-Page Tables</div>
+        <div class="edge-desc">Header row on page 1, orphaned data rows on later pages — must reassemble</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-high">HIGH</div>
+        <div class="edge-title">Mixed Languages</div>
+        <div class="edge-desc">English + German + French in one doc — multilingual embeddings required</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-high">HIGH</div>
+        <div class="edge-title">Tables as Images</div>
+        <div class="edge-desc">Excel screenshots pasted as PNG — OCR + vision model needed</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Duplicate Versions</div>
+        <div class="edge-desc">v1 &amp; v2 both indexed with conflicting data — content-hash dedup</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Rotated Pages</div>
+        <div class="edge-desc">90° landscape tables on portrait pages — rotation detection needed</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Conflicting Figures</div>
+        <div class="edge-desc">Executive summary vs appendix disagree — surface conflicts with sources</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Time-Sensitive Data</div>
+        <div class="edge-desc">Old reports still indexed — attach doc dates &amp; warn on staleness</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Math Equations</div>
+        <div class="edge-desc">LaTeX/MathML as images — content lost without OCR or equation parsing</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-med">MED</div>
+        <div class="edge-title">Legal Boilerplate</div>
+        <div class="edge-desc">60+ pages of identical disclaimers — dedup or exclude sections</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Embedded PDFs</div>
+        <div class="edge-desc">PDFs nested inside other PDFs — standard parsers miss inner docs</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Handwritten Notes</div>
+        <div class="edge-desc">Margin annotations in scanned docs — handwriting-specific models needed</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Watermarks</div>
+        <div class="edge-desc">Semi-transparent overlays degrade OCR accuracy on underlying text</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Cross-Doc References</div>
+        <div class="edge-desc">"See Report B" — referenced doc missing from corpus</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Form Fields</div>
+        <div class="edge-desc">Filled AcroFields stored separately — standard extraction misses form data</div>
+      </div>
+
+      <div class="edge-card">
+        <div class="edge-badge badge-low">LOW</div>
+        <div class="edge-title">Invisible Text Layers</div>
+        <div class="edge-desc">OCR-generated PDFs with hidden text behind images</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<section>
+  <div class="container">
+    <div class="section-title">🛠️ Tech Stack Recommendations</div>
+    <div class="section-subtitle">Tools &amp; libraries for each pipeline stage</div>
+
+    <div class="grid-2">
+      <div class="card blue">
+        <div class="card-title">Content Extraction</div>
+        <ul class="content-list">
+          <li>pdf-parse, pdfjs-dist, pdf-lib</li>
+          <li>tesseract.js, AWS Textract, Azure DI</li>
+          <li>tabula-js, pdfreader</li>
+          <li>sharp (image processing)</li>
+        </ul>
+      </div>
+
+      <div class="card blue">
+        <div class="card-title">Embeddings &amp; Retrieval</div>
+        <ul class="content-list">
+          <li>openai SDK (text-embedding-3-large)</li>
+          <li>@xenova/transformers (BGE-M3, CLIP)</li>
+          <li>cohere-ai (reranking)</li>
+          <li>@elastic/elasticsearch (sparse)</li>
+        </ul>
+      </div>
+
+      <div class="card orange">
+        <div class="card-title">Vector Stores</div>
+        <ul class="content-list">
+          <li>@qdrant/js-client-rest</li>
+          <li>@pinecone-database/pinecone</li>
+          <li>weaviate-ts-client</li>
+          <li>pgvector (PostgreSQL)</li>
+        </ul>
+      </div>
+
+      <div class="card orange">
+        <div class="card-title">LLM Providers</div>
+        <ul class="content-list">
+          <li>openai SDK (GPT-4o)</li>
+          <li>@anthropic-ai/sdk (Claude)</li>
+          <li>@google/generative-ai (Gemini)</li>
+          <li>langsmith (evals &amp; monitoring)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Multi-Modal RAG Summary — PDF Ingestion: Text · Tables · Images — 2026
+</footer>
+
+</body>
+</html>

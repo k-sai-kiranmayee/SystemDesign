@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LLM & GenAI Complete Guide</title>
+<style>
+:root{--bg:#0f1117;--s:#1a1d27;--s2:#23273a;--b:#2e3350;--blue:#4f8ef7;--green:#3ecf8e;--orange:#f59e0b;--red:#ef4444;--purple:#a78bfa;--cyan:#22d3ee;--pink:#f472b6;--yellow:#facc15;--t:#e2e8f0;--m:#94a3b8;--d:#64748b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t);line-height:1.6}
+.hero{background:linear-gradient(135deg,#1a1d27,#0f1117 50%,#1a1d27);border-bottom:1px solid var(--b);padding:56px 32px 48px;text-align:center}
+.badge{display:inline-block;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.35);color:var(--blue);border-radius:999px;padding:4px 16px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px}
+h1{font-size:clamp(24px,4vw,46px);font-weight:800;background:linear-gradient(90deg,#4f8ef7,#a78bfa,#22d3ee,#3ecf8e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;margin-bottom:16px}
+.hero p{color:var(--m);font-size:15px;max-width:700px;margin:0 auto 32px}
+.stats{display:flex;justify-content:center;gap:36px;flex-wrap:wrap}
+.stat-v{font-size:28px;font-weight:800;color:var(--t)}.stat-l{font-size:11px;color:var(--d);text-transform:uppercase;letter-spacing:.07em}
+.container{max-width:1240px;margin:0 auto;padding:0 24px}
+section{padding:56px 0 40px}
+.sec-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.sec-sub{color:var(--m);font-size:13px;margin-bottom:28px;padding-left:34px}
+hr.div{border:none;border-top:1px solid var(--b);margin:0 24px}
+/* FLOW */
+.flow-chain{display:flex;align-items:center;gap:0;overflow-x:auto;padding:20px 0 12px;flex-wrap:nowrap}
+.fc-step{flex-shrink:0;background:var(--s);border:1px solid var(--b);border-radius:10px;padding:14px 16px;min-width:140px;text-align:center;position:relative}
+.fc-step .fc-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.fc-step .fc-title{font-size:13px;font-weight:700;color:var(--t);margin-bottom:4px}
+.fc-step .fc-sub{font-size:10px;color:var(--m);line-height:1.4}
+.fc-arr{color:var(--d);font-size:20px;padding:0 8px;flex-shrink:0}
+.fc-step.c1{border-color:rgba(79,142,247,.4);background:rgba(79,142,247,.06)}
+.fc-step.c2{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.06)}
+.fc-step.c3{border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.06)}
+.fc-step.c4{border-color:rgba(62,207,142,.4);background:rgba(62,207,142,.06)}
+.fc-step.c5{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.06)}
+.fc-step.c6{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06)}
+.fc-step.c7{border-color:rgba(244,114,182,.4);background:rgba(244,114,182,.06)}
+.fc-step.c8{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.06)}
+/* CARDS */
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.guide-card{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:20px 22px;text-decoration:none;color:var(--t);display:block;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
+.guide-card:hover{border-color:var(--accent,var(--blue));background:var(--s2)}
+.guide-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;background:var(--accent,var(--blue))}
+.gc-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--d);margin-bottom:8px}
+.gc-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.gc-desc{font-size:12px;color:var(--m);line-height:1.55;margin-bottom:12px}
+.gc-topics{display:flex;flex-wrap:wrap;gap:5px}
+.topic-pill{font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--b);color:var(--d)}
+/* CONNECTIONS */
+.conn-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:10px;overflow:hidden;border:1px solid var(--b)}
+.conn-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--d);border-bottom:1px solid var(--b);background:var(--s2)}
+.conn-table td{padding:10px 16px;border-bottom:1px solid var(--b);color:var(--m);vertical-align:top;line-height:1.5}
+.conn-table tr:last-child td{border-bottom:none}
+.conn-table tr:hover td{background:rgba(255,255,255,.015)}
+.conn-table td:first-child{color:var(--t);font-weight:600;white-space:nowrap}
+.link-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;text-decoration:none;margin:2px 2px 2px 0}
+footer{text-align:center;padding:32px;color:var(--d);font-size:12px;border-top:1px solid var(--b)}
+.phase-badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;margin-bottom:10px}
+.ph-train{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#f59e0b}
+.ph-arch{background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#a78bfa}
+.ph-infer{background:rgba(62,207,142,.15);border:1px solid rgba(62,207,142,.4);color:#3ecf8e}
+.ph-mixed{background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.4);color:#4f8ef7}
+.phase-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:18px;padding:14px 20px;background:var(--s);border:1px solid var(--b);border-radius:10px;align-items:center}
+.pl-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--m)}
+.gc-phase-breakdown{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+.gpb-row{display:flex;align-items:flex-start;gap:7px}
+.gpb-row .phase-badge{flex-shrink:0;margin:2px 0 0 0;font-size:8px;padding:1px 6px}
+.gpb-desc{font-size:11px;color:var(--m);line-height:1.55}
+a{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<div style="background:linear-gradient(135deg,rgba(62,207,142,.12),rgba(79,142,247,.08));border-bottom:2px solid rgba(62,207,142,.35);padding:14px 32px;text-align:center;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">
+  <span style="font-size:18px">🚀</span>
+  <span style="font-size:14px;font-weight:700;color:#e2e8f0">New to LLMs?</span>
+  <span style="font-size:13px;color:#94a3b8">Start with the plain-English overview before diving into technical modules.</span>
+  <a href="how-llm-works.html" style="background:rgba(62,207,142,.2);border:1px solid rgba(62,207,142,.5);color:#3ecf8e;padding:6px 18px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">→ Start Here: How LLMs Work</a>
+</div>
+
+<div class="hero">
+  <div class="badge">Complete Reference</div>
+  <h1>LLM &amp; Generative AI<br/>Complete Technical Guide</h1>
+  <p>From raw text and language model fundamentals all the way to fine-tuning open-source models, building agents, and deploying production AI systems — every concept interconnected.</p>
+  <div class="stats">
+    <div><div class="stat-v" style="color:var(--blue)">12</div><div class="stat-l">Topic Modules</div></div>
+    <div><div class="stat-v" style="color:var(--purple)">50+</div><div class="stat-l">Concepts</div></div>
+    <div><div class="stat-v" style="color:var(--green)">100+</div><div class="stat-l">Code Snippets</div></div>
+    <div><div class="stat-v" style="color:var(--orange)">80+</div><div class="stat-l">Edge Cases</div></div>
+    <div><div class="stat-v" style="color:var(--cyan)">14</div><div class="stat-l">Files</div></div>
+  </div>
+</div>
+
+<section>
+  <div class="container">
+    <div class="sec-title"><span>🔗</span> How Everything Connects — Master Flow</div>
+    <div class="sec-sub">Follow the chain: each block feeds into the next. Click any module card below to dive in.</div>
+    <div class="flow-chain">
+      <div class="fc-step c4"><div class="fc-num" style="color:#3ecf8e">Start Here</div><div class="fc-title"><a href="how-llm-works.html" style="color:inherit;text-decoration:none">How It Works</a></div><div class="fc-sub">Layman guide — training + inference end-to-end</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c1"><div class="fc-num" style="color:#4f8ef7">Module 1</div><div class="fc-title">Foundations</div><div class="fc-sub">Language models, deep learning, text generation</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c2"><div class="fc-num" style="color:#a78bfa">Module 2</div><div class="fc-title">Architecture</div><div class="fc-sub">Transformer, tokenization, attention, model types</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c3"><div class="fc-num" style="color:#22d3ee">Module 3</div><div class="fc-title">API &amp; Prompts</div><div class="fc-sub">ChatGPT API, Python, prompt engineering</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c4"><div class="fc-num" style="color:#3ecf8e">Module 4</div><div class="fc-title">RAG &amp; LangChain</div><div class="fc-sub">Vector stores, retrieval, chains, evaluation</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c5"><div class="fc-num" style="color:#f59e0b">Module 5</div><div class="fc-title">Agents</div><div class="fc-sub">Tool use, LangGraph, multi-agent systems</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c6"><div class="fc-num" style="color:#ef4444">Module 6</div><div class="fc-title">Production</div><div class="fc-sub">LangSmith, MCP, A2A protocol</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c7"><div class="fc-num" style="color:#f472b6">Module 7</div><div class="fc-title">Open Source &amp; Fine-tuning</div><div class="fc-sub">HuggingFace, LoRA, quantization, alignment</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step c8"><div class="fc-num" style="color:#facc15">Module 8</div><div class="fc-title"><a href="trends.html" style="color:inherit;text-decoration:none">Trends</a></div><div class="fc-sub">MoE, Mamba, reasoning models, SLMs</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step" style="border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.06);flex-shrink:0;border-radius:10px;padding:14px 16px;min-width:140px;text-align:center"><div class="fc-num" style="color:#818cf8">Module 9</div><div class="fc-title"><a href="comparison.html" style="color:inherit;text-decoration:none">Compare</a></div><div class="fc-sub">Old vs new — side-by-side</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step" style="border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.06);flex-shrink:0;border-radius:10px;padding:14px 16px;min-width:140px;text-align:center"><div class="fc-num" style="color:#22d3ee">Module 10</div><div class="fc-title"><a href="when-to-use.html" style="color:inherit;text-decoration:none">When to Use</a></div><div class="fc-sub">Decision reference guide</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step" style="border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.06);flex-shrink:0;border-radius:10px;padding:14px 16px;min-width:140px;text-align:center"><div class="fc-num" style="color:#22d3ee">Module 11</div><div class="fc-title"><a href="rag-pdf.html" style="color:inherit;text-decoration:none">PDF RAG</a></div><div class="fc-sub">Multi-modal PDF pipeline, challenges &amp; solutions</div></div>
+      <div class="fc-arr">→</div>
+      <div class="fc-step" style="border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.06);flex-shrink:0;border-radius:10px;padding:14px 16px;min-width:140px;text-align:center"><div class="fc-num" style="color:#06b6d4">Module 12</div><div class="fc-title"><a href="rag-pdf-summary.html" style="color:inherit;text-decoration:none">PDF RAG Summary</a></div><div class="fc-sub">Quick reference — pipeline, stack, edge cases</div></div>
+    </div>
+
+    <br/>
+    <div style="background:var(--s);border:1px solid var(--b);border-radius:12px;padding:20px 24px;font-family:'Cascadia Code','Consolas',monospace;font-size:12px;color:var(--m);line-height:1.8;overflow-x:auto">
+<pre style="margin:0">
+╔══════════════════════════════════════════════════════════════════════╗
+║  TRAINING PHASE  — how model weights are learned                     ║
+║  Modules 1 (Blocks 2, 3, 5) · Module 7                              ║
+╚══════════════════════════════════════════════════════════════════════╝
+Raw Text Corpus (pre-training) / Instruction pairs (SFT) / Human feedback (RLHF)
+      │
+      ▼
+  [Forward Pass]
+  ┌────────────────── ARCHITECTURE (forward pass runs in BOTH phases) ──────────────────┐
+  │  Tokenise → token IDs → Embedding lookup → vectors + Positional encoding            │
+  │  Transformer Blocks × N:  Self-Attention → captures cross-token relationships       │
+  │                           FFN (MLP)      → processes each position                  │
+  │                           LayerNorm + Residual connections                          │
+  └────────────────────────────────────────────────────────────────────────────────────┘
+      │
+      ▼  (training diverges here)
+  [Loss Function]  cross-entropy → Backpropagation → AdamW weight update
+      │
+      ▼
+  [Pre-trained LLM weights]  ←── fine-tuned via LoRA / QLoRA / RLHF / DPO  [Module 7]
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  INFERENCE / OUTPUT PHASE  — using the trained model to generate     ║
+║  Modules 1 (Block 4) · 2 · 3 · 4 · 5 · 6                           ║
+╚══════════════════════════════════════════════════════════════════════╝
+      │  (same Architecture forward pass, but diverges at sampling)
+      ▼
+  [Logits → Softmax → Sample]  temperature / top-p / top-k / beam search
+      │
+      ▼
+[API / Inference]  ←── system prompts, few-shot, CoT  [Module 3]
+      │
+      ├──→ [RAG Pipeline]   vector store → cosine search → augment context  [Module 4]
+      │          │
+      │          ▼
+      ├──→ [LangChain / LCEL]  chains, output parsers, memory
+      │          │
+      │          ▼
+      └──→ [Agents]  ReAct loop: Thought → Action → Observation  [Module 5]
+                 │
+                 ├──→ [Tools]  APIs, databases, code execution
+                 ├──→ [LangGraph]  stateful multi-step workflows
+                 └──→ [Multi-Agent]  orchestrator + specialists
+                            │
+                            ▼
+              [Production Layer]  [Module 6]
+               LangSmith (tracing) | MCP (data access) | A2A (agent-to-agent)
+                            │
+                            ▼
+                   Final Answer to User
+</pre>
+    </div>
+    <div class="phase-legend">
+      <strong style="font-size:11px;color:var(--t);margin-right:4px">Phase Key:</strong>
+      <div class="pl-item"><span class="phase-badge ph-train" style="margin:0">Training Phase</span> Weights are learned — forward pass + loss + backprop + optimizer update</div>
+      <div class="pl-item"><span class="phase-badge ph-arch" style="margin:0">Architecture</span> Forward pass structure — shared by both phases (tokenize → embed → attention → FFN → logits)</div>
+      <div class="pl-item"><span class="phase-badge ph-infer" style="margin:0">Inference Phase</span> Model is frozen — logits → sampling → token output → final answer</div>
+      <div class="pl-item"><span class="phase-badge ph-mixed" style="margin:0">Training + Inference</span> Module covers both phases</div>
+    </div>
+  </div>
+</section>
+
+<hr class="div"/>
+
+<section>
+  <div class="container">
+    <div class="sec-title"><span>📚</span> Module Files</div>
+    <div class="sec-sub">Each file is self-contained with diagrams, code, edge cases, and cross-links</div>
+    <div class="guide-grid">
+
+      <a href="how-llm-works.html" class="guide-card" style="--accent:#3ecf8e">
+        <div class="gc-num">Start Here</div>
+        <div class="phase-badge ph-mixed">Training + Inference Phase</div>
+        <div class="gc-title" style="color:#3ecf8e">How LLMs Work — Layman Guide</div>
+        <div class="gc-desc">The complete picture in plain English — from raw text and token IDs all the way to a response in your browser. Read this before any other module.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc">Tokenization → Embeddings → Attention → Layers → Loss → Backprop → AdamW optimizer → Frozen weights</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">Prefill → KV Cache → Logits → Sampling → Autoregressive token-by-token generation → Streamed response</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="foundations.html" class="guide-card" style="--accent:#4f8ef7">
+        <div class="gc-num">Module 1</div>
+        <div class="phase-badge ph-mixed">Training + Inference Phase</div>
+        <div class="gc-title" style="color:#4f8ef7">LLM Foundations</div>
+        <div class="gc-desc">Conceptual foundation that every other module builds on — covers both how LLMs are trained and how they generate output.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc"><strong>Block 2</strong> Deep Learning — forward pass, loss function, backpropagation, AdamW optimizer &nbsp;·&nbsp; <strong>Block 3</strong> LLM Training pipeline — pre-training (next-token prediction), SFT (instruction tuning), RLHF (alignment) &nbsp;·&nbsp; <strong>Block 5</strong> Scaling Laws &amp; emergent abilities</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc"><strong>Block 4</strong> Text Generation — autoregressive loop (token-by-token), temperature, top-p, top-k, beam search</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-arch">Both</span>
+            <span class="gpb-desc"><strong>Block 1</strong> What is an LLM — probability &amp; chain rule (conceptual foundation for both phases)</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="architecture.html" class="guide-card" style="--accent:#a78bfa">
+        <div class="gc-num">Module 2</div>
+        <div class="phase-badge ph-arch">Architecture · Forward Pass (Both Phases)</div>
+        <div class="gc-title" style="color:#a78bfa">Technical Architecture</div>
+        <div class="gc-desc">Describes the forward pass — the internal pipeline every transformer runs. This same pipeline executes in both training and inference; it is not exclusive to either.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-arch">Architecture · Both Phases</span>
+            <span class="gpb-desc">Tokenize (text → token IDs) → Static embedding lookup (token ID → vector, no attention yet) → Positional encoding → Self-Attention blocks (Q/K/V, where tokens first see each other) → FFN layers → Final linear projection → Logits</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-arch">Architecture · Both Phases</span>
+            <span class="gpb-desc">Model types: <strong>Encoder-only</strong> (BERT — bidirectional, for classification/embeddings) &nbsp;·&nbsp; <strong>Decoder-only</strong> (GPT/Llama — causal, for generation) &nbsp;·&nbsp; <strong>Encoder-Decoder</strong> (T5 — seq2seq, for translation/summarisation)</span>
+          </div>
+          <div class="gpb-row" style="margin-top:2px">
+            <span class="gpb-desc" style="color:var(--d);font-size:10.5px;font-style:italic">Training diverges after logits → loss → backprop → weight update &nbsp;|&nbsp; Inference diverges after logits → sampling → output token</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="api-prompts.html" class="guide-card" style="--accent:#22d3ee">
+        <div class="gc-num">Module 3</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#22d3ee">API Integration &amp; Prompt Engineering</div>
+        <div class="gc-desc">How to consume a trained, frozen model. No weight changes happen here — this is entirely about steering the model's output at runtime.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">API request/response flow, message roles (system / user / assistant), parameters (temperature, max_tokens, top_p, frequency_penalty), streaming token-by-token output</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">Prompt engineering — system prompts, few-shot examples, Chain-of-Thought (CoT), ReAct pattern, output format control</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="rag-langchain.html" class="guide-card" style="--accent:#3ecf8e">
+        <div class="gc-num">Module 4</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#3ecf8e">RAG &amp; LangChain</div>
+        <div class="gc-desc">Augmenting a frozen model with external knowledge at runtime — no retraining, no weight updates.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference · Indexing (offline prep)</span>
+            <span class="gpb-desc">Chunk documents → run through encoder model (bidirectional Transformer) → produce contextual vectors → store in vector DB (Pinecone, Chroma, pgvector)</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference · Per request</span>
+            <span class="gpb-desc">Embed user query → cosine similarity search → retrieve top-K chunks → inject into prompt → LLM generates grounded answer. LangChain LCEL chains, output parsers, memory, RAGAS evaluation</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="agents.html" class="guide-card" style="--accent:#f59e0b">
+        <div class="gc-num">Module 5</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#f59e0b">Agentic AI &amp; Multi-Agent Systems</div>
+        <div class="gc-desc">Multi-step inference on a frozen model — the model reasons and calls tools across many forward passes to complete a task.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">ReAct loop — Thought → Action → Observation, repeated until task complete. Each iteration is one inference call. Function/tool calling (model outputs structured JSON to invoke tools)</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">Planning strategies (CoT, Tree-of-Thought) &nbsp;·&nbsp; LangGraph stateful workflows (nodes = LLM calls, edges = routing logic) &nbsp;·&nbsp; Multi-agent orchestration (orchestrator + specialist agents)</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="production.html" class="guide-card" style="--accent:#ef4444">
+        <div class="gc-num">Module 6</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#ef4444">Production: LangSmith, MCP &amp; A2A</div>
+        <div class="gc-desc">Wraps and observes inference in production — tracing calls, connecting agents to data, and coordinating multi-agent systems. Model weights are not touched here.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">LangSmith — trace every LLM call, inspect inputs/outputs, measure latency, run evaluations on production traffic</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">MCP (Model Context Protocol) — standardised way for agents to access external data sources (files, databases, APIs) during inference &nbsp;·&nbsp; A2A Protocol — agent-to-agent communication, task handoff, capability discovery</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="open-source.html" class="guide-card" style="--accent:#f472b6">
+        <div class="gc-num">Module 7</div>
+        <div class="phase-badge ph-train">Training Phase</div>
+        <div class="gc-title" style="color:#f472b6">Open Source &amp; Fine-Tuning</div>
+        <div class="gc-desc">The only module entirely in the training phase — every technique here modifies or adapts model weights.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc">HuggingFace ecosystem (Hub, Transformers.js, datasets, pipeline API) &nbsp;·&nbsp; SFT — supervised fine-tuning on (instruction, response) pairs: forward pass → cross-entropy loss → backprop → weight update</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc">LoRA / QLoRA — freeze base weights, train small low-rank adapter matrices only (much cheaper) &nbsp;·&nbsp; Quantization (INT8/INT4/GPTQ/GGUF) — compress weights for faster inference after training &nbsp;·&nbsp; RLHF / DPO — alignment: train reward model from human preferences, fine-tune policy model</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="trends.html" class="guide-card" style="--accent:#facc15">
+        <div class="gc-num">Module 8</div>
+        <div class="phase-badge" style="background:rgba(250,204,21,.15);border:1px solid rgba(250,204,21,.4);color:#facc15">Reference · Emerging Tech</div>
+        <div class="gc-title" style="color:#facc15">Trends &amp; Emerging Architectures</div>
+        <div class="gc-desc">What's happening right now — the architectural shifts replacing classic transformers, and the reasoning models changing how we think about LLM output.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-arch">Architecture</span>
+            <span class="gpb-desc">Mixture of Experts (MoE) · Mixture of Recursions (MoR) · Mamba / RWKV (state-space models replacing O(n²) attention) · FlashAttention v2/v3</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc">Reasoning models (o1/o3/DeepSeek-R1) · SLMs (small language models) · Multi-modal LLMs · Modern alignment — GRPO / RLVR replacing PPO</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="comparison.html" class="guide-card" style="--accent:#818cf8">
+        <div class="gc-num">Module 9</div>
+        <div class="phase-badge" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);color:#818cf8">Reference · Comparison</div>
+        <div class="gc-title" style="color:#818cf8">Old vs New — Side-by-Side</div>
+        <div class="gc-desc">Every major architectural shift visualised: what the old approach was, why it was replaced, and what changed under the hood.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-arch">Architecture</span>
+            <span class="gpb-desc">Dense vs MoE · O(n²) attention vs Mamba · Fixed vs dynamic depth · Sequential vs speculative decoding</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-train">Training</span>
+            <span class="gpb-desc">Standard vs reasoning models · Naive RAG vs hybrid RAG · Full fine-tune vs LoRA · PPO vs DPO</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="when-to-use.html" class="guide-card" style="--accent:#22d3ee">
+        <div class="gc-num">Module 10</div>
+        <div class="phase-badge" style="background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.4);color:#22d3ee">Reference · Decision Guide</div>
+        <div class="gc-title" style="color:#22d3ee">When to Use What</div>
+        <div class="gc-desc">Decision reference — given a scenario, which approach, model type, or technique should you reach for? Covers the full stack from architecture to tooling.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-mixed">Both Phases</span>
+            <span class="gpb-desc">RAG vs fine-tuning · Which model type (encoder / decoder / encoder-decoder) · When to use agents vs chains · MoE vs dense · API vs self-hosted</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="rag-pdf.html" class="guide-card" style="--accent:#22d3ee">
+        <div class="gc-num">Module 11</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#22d3ee">RAG with PDFs — Challenges &amp; Solutions</div>
+        <div class="gc-desc">Deep-dive into multi-modal PDF RAG: the full 10-stage pipeline from user input to response output, challenges per content type, and production-grade solutions.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference · Indexing</span>
+            <span class="gpb-desc">PDF pre-processing → multi-modal extraction (text, tables, images) → intelligent chunking → embedding generation → vector store indexing</span>
+          </div>
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference · Per request</span>
+            <span class="gpb-desc">Query processing → hybrid retrieval (dense + sparse + cross-encoder reranking) → LLM generation → structured response output. Edge cases by content type: text/table/image/chunking/embedding/LLM.</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="rag-pdf-summary.html" class="guide-card" style="--accent:#06b6d4">
+        <div class="gc-num">Module 12</div>
+        <div class="phase-badge ph-infer">Inference / Output Phase</div>
+        <div class="gc-title" style="color:#06b6d4">Multi-Modal RAG with PDFs — Summary</div>
+        <div class="gc-desc">Concise reference card for the 10-stage pipeline, 3-track architecture, key solutions, recommended tech stack, and critical edge cases for PDF RAG systems.</div>
+        <div class="gc-phase-breakdown">
+          <div class="gpb-row">
+            <span class="phase-badge ph-infer">Inference</span>
+            <span class="gpb-desc">Pipeline summary (10 stages) &nbsp;·&nbsp; 3-track architecture (Basic / Advanced / Production) &nbsp;·&nbsp; Tech stack recommendations: PyMuPDF, Camelot, FAISS/Weaviate, BGE embeddings, cohere reranker</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<hr class="div"/>
+
+<section>
+  <div class="container">
+    <div class="sec-title"><span>🔀</span> Cross-Module Connections</div>
+    <div class="sec-sub">Understanding depends on — and feeds into — these other modules</div>
+    <table class="conn-table">
+      <thead><tr><th>Module</th><th>Depends on</th><th>Feeds into</th><th>Key shared concept</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Foundations</td><td>Nothing (start here)</td><td>All other modules</td><td>Next-token prediction is the basis of everything</td></tr>
+        <tr><td>2 · Architecture</td><td>Module 1 (language models)</td><td>Module 7 (fine-tuning needs arch knowledge)</td><td>Tokenization affects API token counts (Module 3) and chunking (Module 4)</td></tr>
+        <tr><td>3 · API &amp; Prompts</td><td>Modules 1, 2</td><td>Modules 4, 5</td><td>Chat message format is the interface for RAG context injection and agent tool outputs</td></tr>
+        <tr><td>4 · RAG &amp; LangChain</td><td>Modules 2 (embeddings), 3 (API calls)</td><td>Module 5 (agents use RAG as a tool)</td><td>Vector similarity search is used inside agent tools and MCP resources</td></tr>
+        <tr><td>5 · Agents</td><td>Modules 3, 4</td><td>Module 6 (agents are observed by LangSmith, connected via MCP/A2A)</td><td>LangGraph state graph = backbone of multi-agent systems</td></tr>
+        <tr><td>6 · Production</td><td>Module 5 (agents to observe/connect)</td><td>All (production wraps every module)</td><td>MCP standardises how agents in Module 5 access external data (like RAG in Module 4)</td></tr>
+        <tr><td>7 · Open Source &amp; Fine-tuning</td><td>Modules 1, 2</td><td>Modules 3, 4 (fine-tuned models are called the same way)</td><td>LoRA modifies the same weight matrices as Module 2's architecture</td></tr>
+        <tr><td>8 · Trends &amp; Emerging Arch</td><td>Modules 1, 2 (architecture baseline)</td><td>Module 9 (comparisons reference new architectures)</td><td>MoE and Mamba are architectural alternatives to the dense transformer in Module 2</td></tr>
+        <tr><td>9 · Old vs New Comparison</td><td>Modules 1–8</td><td>Module 10 (decision guide uses comparisons)</td><td>Synthesises all architectural and training technique changes across the guide</td></tr>
+        <tr><td>10 · When to Use What</td><td>Modules 1–9</td><td>Nothing (terminal reference)</td><td>Consolidates all technique trade-offs into actionable decision rules</td></tr>
+        <tr><td>11 · RAG with PDFs</td><td>Module 4 (RAG fundamentals)</td><td>Module 12 (summary of same pipeline)</td><td>Multi-modal extraction and hybrid retrieval extend Module 4's vector-store approach</td></tr>
+        <tr><td>12 · PDF RAG Summary</td><td>Module 11</td><td>Nothing (condensed reference)</td><td>Concise version of the 10-stage pipeline for quick recall</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>LLM &amp; GenAI Complete Technical Guide &mdash; 12 modules &mdash; 50+ concepts &mdash; 80+ edge cases &mdash; <a href="../main.html">← Knowledge Hub</a></footer>
+</body>
+</html>

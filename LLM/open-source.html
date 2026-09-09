@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 7 — HuggingFace &amp; Fine-tuning</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1 · Foundations</a>
+  <a href="architecture.html">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API &amp; Prompts</a>
+  <a href="rag-langchain.html">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html">6 · Production</a>
+  <a href="open-source.html" class="active">7 · Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step active" style="color:#22d3ee;border-color:#22d3ee">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);color:#22d3ee">Module 7 — Open Source &amp; Fine-tuning</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#22d3ee,#3ecf8e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">HuggingFace, LoRA, Quantization &amp; Alignment</h1>
+  <p>Run open-source models locally or on cloud GPUs. Adapt them cheaply with LoRA/QLoRA. Compress them with quantization. Align them with RLHF and DPO. Builds on <a href="architecture.html" style="color:#22d3ee">Module 2 Architecture</a> fundamentals.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- BLOCK 1: HuggingFace Overview -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">1</div>
+    <div><div class="bh-title">HuggingFace Ecosystem</div><div class="bh-sub">Hub · Transformers · Datasets · Pipeline API</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card cyan">
+        <div class="mc-icon">🤗</div>
+        <div class="mc-title">Hub (huggingface.co)</div>
+        <div class="mc-body">Host for 900,000+ models, 100,000+ datasets, and Spaces (live demos). Models come with model cards, benchmarks, and license info.</div>
+      </div>
+      <div class="mini-card blue">
+        <div class="mc-icon">🔧</div>
+        <div class="mc-title">Transformers.js</div>
+        <div class="mc-body">JS port of HuggingFace transformers. Run 1000s of models in Node.js or the browser via ONNX/WebAssembly. Same API as Python: <code>pipeline()</code>, <code>AutoTokenizer</code>, <code>AutoModel</code>.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-icon">📦</div>
+        <div class="mc-title">datasets</div>
+        <div class="mc-body">Efficient loading of thousands of benchmark and community datasets. Arrow-backed for memory-efficient processing. Streaming for datasets too large to download.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-icon">⚡</div>
+        <div class="mc-title">HuggingFace Inference API</div>
+        <div class="mc-body">Call any Hub model as an HTTP API. JS SDK: <code>@huggingface/inference</code>. No GPU needed — HF handles infrastructure. Free tier available; serverless or dedicated endpoints.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-icon">🏋️</div>
+        <div class="mc-title">AutoTrain</div>
+        <div class="mc-body">HuggingFace's no-code/API fine-tuning service. Submit jobs via the Hub UI or REST API. Handles SFT, DPO, LoRA — no Python or GPU setup on your end.</div>
+      </div>
+      <div class="mini-card pink">
+        <div class="mc-icon">🚀</div>
+        <div class="mc-title">Inference Endpoints</div>
+        <div class="mc-body">Deploy any Hub model as a production API with one click. Autoscaling, private endpoints, and GPU selection. Alternative to running your own vLLM server.</div>
+      </div>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Transformers.js — pipeline API in Node.js / browser</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @xenova/transformers</span>
+<span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+
+<span class="cm">// text-generation, text-classification, summarization, translation, ner, ...</span>
+<span class="cm">// Model weights are downloaded from HF Hub and cached on first run</span>
+<span class="kw">const</span> generator = <span class="kw">await</span> <span class="fn">pipeline</span>(<span class="str">"text-generation"</span>, <span class="str">"Xenova/Qwen1.5-0.5B-Chat"</span>);
+
+<span class="kw">const</span> output = <span class="kw">await</span> generator(
+  [{ role: <span class="str">"user"</span>, content: <span class="str">"What is 2+2?"</span> }],
+  { max_new_tokens: <span class="num">100</span>, do_sample: <span class="kw">false</span> }
+);
+console.<span class="fn">log</span>(output[<span class="num">0</span>].generated_text.<span class="fn">at</span>(-<span class="num">1</span>).content);  <span class="cm">// "4"</span>
+
+<span class="cm">// Embedding pipeline for RAG (see Module 4)</span>
+<span class="kw">const</span> embedder = <span class="kw">await</span> <span class="fn">pipeline</span>(<span class="str">"feature-extraction"</span>, <span class="str">"Xenova/multilingual-e5-large"</span>);
+<span class="kw">const</span> vectors  = <span class="kw">await</span> embedder([<span class="str">"hello world"</span>, <span class="str">"hi there"</span>], { pooling: <span class="str">"mean"</span> });
+<span class="cm">// Tensor { dims: [2, 1024], data: Float32Array }</span></pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>HuggingFace Inference API (cloud — any model on the Hub)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @huggingface/inference</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+
+<span class="kw">const</span> hf = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+
+<span class="cm">// Text generation (chat)</span>
+<span class="kw">const</span> result = <span class="kw">await</span> hf.<span class="fn">chatCompletion</span>({
+  model:    <span class="str">"meta-llama/Llama-3.2-3B-Instruct"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"What is LoRA?"</span> }],
+  max_tokens: <span class="num">200</span>,
+});
+console.<span class="fn">log</span>(result.choices[<span class="num">0</span>].message.content);
+
+<span class="cm">// Embeddings</span>
+<span class="kw">const</span> embeddings = <span class="kw">await</span> hf.<span class="fn">featureExtraction</span>({
+  model: <span class="str">"intfloat/multilingual-e5-large"</span>,
+  inputs: [<span class="str">"hello world"</span>, <span class="str">"hi there"</span>],
+});
+<span class="cm">// number[][] — each sub-array is a 1024-dim vector</span>
+
+<span class="cm">// Streaming generation</span>
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> hf.<span class="fn">chatCompletionStream</span>({
+  model: <span class="str">"meta-llama/Llama-3.2-3B-Instruct"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Tell me a story."</span> }],
+})) {
+  process.stdout.<span class="fn">write</span>(chunk.choices[<span class="num">0</span>]?.delta?.content ?? <span class="str">""</span>);
+}</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> HuggingFace is GitHub for ML models — 900,000+ models with a standard API. In JavaScript you have two paths: Transformers.js runs models directly in your browser or Node.js process (no API key, fully private), or the HF Inference API calls models on HuggingFace's servers (easy, any model size, just needs a free token).</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: Loading & Running Models -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">2</div>
+    <div><div class="bh-title">Loading &amp; Running Models in JavaScript</div><div class="bh-sub">Transformers.js (local) · HF Inference API (cloud) · Ollama (local GGUF)</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+JS Options for Running Open-Source Models:
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  Transformers.js (@xenova/transformers)                              │
+  │  • Models converted to ONNX format, run via ONNX Runtime (WASM/GPU) │
+  │  • Works in Node.js AND the browser (no server needed)              │
+  │  • Best for: smaller models (&lt;3B), edge/browser inference            │
+  │  • Supports: text-gen, classification, NER, embeddings, ASR, etc.   │
+  └─────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  HF Inference API (@huggingface/inference)                           │
+  │  • HTTP calls to HF-hosted models — any model on the Hub            │
+  │  • No GPU, no download — HF handles infrastructure                  │
+  │  • Best for: prototyping, large models, serverless                  │
+  └─────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  Ollama + openai npm package                                         │
+  │  • Run quantized (GGUF) models locally; OpenAI-compatible REST API  │
+  │  • CPU-friendly; GPU-accelerated on Apple Silicon / CUDA             │
+  │  • Best for: local dev, privacy, offline, no API costs              │
+  └─────────────────────────────────────────────────────────────────────┘
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Transformers.js — AutoTokenizer + AutoModel (Node.js)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @xenova/transformers</span>
+<span class="kw">import</span> { AutoTokenizer, AutoModelForCausalLM } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+
+<span class="kw">const</span> modelId   = <span class="str">"Xenova/Qwen1.5-0.5B-Chat"</span>;  <span class="cm">// ONNX-converted Hub model</span>
+<span class="kw">const</span> tokenizer = <span class="kw">await</span> AutoTokenizer.<span class="fn">from_pretrained</span>(modelId);
+<span class="kw">const</span> model     = <span class="kw">await</span> AutoModelForCausalLM.<span class="fn">from_pretrained</span>(modelId);
+
+<span class="cm">// Apply chat template — adds model-specific special tokens</span>
+<span class="kw">const</span> messages  = [
+  { role: <span class="str">"system"</span>, content: <span class="str">"You are a helpful assistant."</span> },
+  { role: <span class="str">"user"</span>,   content: <span class="str">"What is LoRA?"</span> },
+];
+<span class="kw">const</span> { input_ids } = tokenizer.<span class="fn">apply_chat_template</span>(messages, {
+  tokenize:          <span class="kw">true</span>,
+  return_dict:       <span class="kw">true</span>,
+  add_generation_prompt: <span class="kw">true</span>,
+});
+
+<span class="kw">const</span> outputs = <span class="kw">await</span> model.<span class="fn">generate</span>(input_ids, {
+  max_new_tokens: <span class="num">200</span>,
+  do_sample:      <span class="kw">true</span>,
+  temperature:    <span class="num">0.7</span>,
+  top_p:          <span class="num">0.9</span>,
+});
+
+<span class="cm">// Decode only newly generated tokens</span>
+<span class="kw">const</span> newTokens = outputs.<span class="fn">slice</span>(<span class="kw">null</span>, [input_ids.dims[<span class="num">1</span>], <span class="kw">null</span>]);
+console.<span class="fn">log</span>(tokenizer.<span class="fn">decode</span>(newTokens[<span class="num">0</span>], { skip_special_tokens: <span class="kw">true</span> }));</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Ollama — local quantized models via OpenAI SDK</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// 1. Install: https://ollama.com  → ollama pull llama3.2</span>
+<span class="cm">// 2. npm install openai</span>
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+
+<span class="kw">const</span> ollama = <span class="kw">new</span> <span class="cl">OpenAI</span>({
+  baseURL: <span class="str">"http://localhost:11434/v1"</span>,
+  apiKey:  <span class="str">"ollama"</span>,  <span class="cm">// required by SDK but ignored by Ollama</span>
+});
+
+<span class="kw">const</span> response = <span class="kw">await</span> ollama.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"llama3.2"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"What is LoRA?"</span> }],
+  stream:   <span class="kw">false</span>,
+});
+console.<span class="fn">log</span>(response.choices[<span class="num">0</span>].message.content);
+
+<span class="cm">// Available local models: ollama list
+// Pull a model:           ollama pull mistral
+// Run interactively:      ollama run llama3.2</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Transformers.js uses ONNX format to run models natively in the browser or Node without any server. Ollama runs models locally via a simple REST API — perfect for development. Both let you process data without sending it to any external server, which is critical for private or sensitive data.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: Fine-tuning & Data Prep -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">3</div>
+    <div><div class="bh-title">Instruction Fine-Tuning &amp; Data Preparation</div><div class="bh-sub">SFT · JSONL format · Chat template · Dataset curation</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>Supervised Fine-Tuning (SFT)</strong> teaches a base model to follow instructions by training on (instruction, response) pairs. The model learns to map instructions to desired outputs.</p>
+    <div class="diagram"><pre>
+Training data format — JSONL (one JSON object per line):
+
+  {"messages": [{"role":"system","content":"You are a customer support agent."},
+                {"role":"user","content":"How do I reset my password?"},
+                {"role":"assistant","content":"Go to Settings → Security → Reset Password..."}]}
+
+  {"messages": [{"role":"user","content":"Translate to French: Hello"},
+                {"role":"assistant","content":"Bonjour"}]}
+
+After tokenization + chat template:
+  &lt;|system|&gt;You are a customer support agent.&lt;|end|&gt;
+  &lt;|user|&gt;How do I reset my password?&lt;|end|&gt;
+  &lt;|assistant|&gt;Go to Settings → Security...&lt;|end|&gt;
+
+Training loss computed ONLY on assistant tokens — not system/user tokens.
+Loss mask ensures model learns to generate responses, not repeat prompts.
+    </pre></div>
+    <p><strong>How to fine-tune as a JS developer:</strong> SFT training requires Python + GPU (TRL / PEFT libraries are Python-only). Your JS workflow is: <em>prepare data → trigger training → consume the model.</em></p>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Prepare JSONL dataset &amp; upload to HF Hub (JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install @huggingface/hub</span>
+<span class="kw">import</span> { uploadFile } <span class="kw">from</span> <span class="str">"@huggingface/hub"</span>;
+
+<span class="cm">// Build your JSONL dataset in memory</span>
+<span class="kw">const</span> rows = [
+  { messages: [
+    { role: <span class="str">"system"</span>,    content: <span class="str">"You are a customer support agent."</span> },
+    { role: <span class="str">"user"</span>,      content: <span class="str">"How do I reset my password?"</span> },
+    { role: <span class="str">"assistant"</span>, content: <span class="str">"Go to Settings → Security → Reset Password…"</span> },
+  ]},
+  <span class="cm">// … more examples</span>
+];
+<span class="kw">const</span> jsonl = rows.<span class="fn">map</span>(r => <span class="cl">JSON</span>.<span class="fn">stringify</span>(r)).<span class="fn">join</span>(<span class="str">"\n"</span>);
+
+<span class="cm">// Upload to HuggingFace Hub dataset repo</span>
+<span class="kw">await</span> <span class="fn">uploadFile</span>({
+  repo: { type: <span class="str">"dataset"</span>, name: <span class="str">"my-org/support-dataset"</span> },
+  file: { path: <span class="str">"train.jsonl"</span>, content: <span class="kw">new</span> <span class="cl">Blob</span>([jsonl]) },
+  credentials: { accessToken: process.env.<span class="cl">HF_TOKEN</span> },
+});</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Trigger SFT via HuggingFace AutoTrain API (JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// HuggingFace AutoTrain — no Python or GPU needed on your end</span>
+<span class="cm">// Docs: https://huggingface.co/docs/autotrain</span>
+<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://huggingface.co/api/autotrain/create"</span>, {
+  method:  <span class="str">"POST"</span>,
+  headers: {
+    <span class="str">"Authorization"</span>: <span class="str">`Bearer <span class="kw">${process.env.HF_TOKEN}</span>`</span>,
+    <span class="str">"Content-Type"</span>:  <span class="str">"application/json"</span>,
+  },
+  body: <span class="cl">JSON</span>.<span class="fn">stringify</span>({
+    project_name: <span class="str">"my-sft-job"</span>,
+    task:         <span class="str">"llm-sft"</span>,
+    base_model:   <span class="str">"Qwen/Qwen2.5-0.5B-Instruct"</span>,
+    dataset:      <span class="str">"my-org/support-dataset"</span>,
+    column_mapping: { text: <span class="str">"messages"</span> },
+    params: {
+      num_train_epochs:    <span class="num">3</span>,
+      learning_rate:       <span class="num">2e-4</span>,
+      max_seq_length:      <span class="num">2048</span>,
+      use_peft:            <span class="kw">true</span>,   <span class="cm">// LoRA under the hood</span>
+    },
+  }),
+});
+<span class="cm">// Monitor job at: https://huggingface.co/autotrain
+// Fine-tuned model saved to Hub as "my-org/my-sft-job"</span>
+
+<span class="cm">// ── Use the fine-tuned model from JS once training is done ─────────────</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+<span class="kw">const</span> hf  = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+<span class="kw">const</span> res = <span class="kw">await</span> hf.<span class="fn">chatCompletion</span>({
+  model:    <span class="str">"my-org/my-sft-job"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"How do I reset my password?"</span> }],
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Fine-tuning specialises a general model on your domain — support tickets, legal documents, medical records. You need 100–10,000 labelled examples in instruction/response format. The HuggingFace AutoTrain API lets you trigger a fine-tuning job from JavaScript without writing any Python training code yourself.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: LoRA & QLoRA -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">4</div>
+    <div><div class="bh-title">LoRA &amp; QLoRA — Parameter-Efficient Fine-Tuning</div><div class="bh-sub">Freeze the base model; train only low-rank adapter matrices</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>LoRA</strong> (Low-Rank Adaptation) freezes all original model weights and injects small trainable matrices into attention layers. <strong>QLoRA</strong> extends this by loading the base model in 4-bit quantization — enabling 70B+ model fine-tuning on a single consumer GPU.</p>
+    <div class="diagram"><pre>
+LoRA Math:
+
+  Original weight:  W  (e.g., 4096×4096 = 16.7M params)  ← FROZEN
+  LoRA adapters:    A (4096×r) and B (r×4096)             ← TRAINABLE
+                    where r = rank (typically 8–64)
+
+  Forward pass:  output = (W + A×B) × input
+  Training:      only A and B are updated via backprop
+
+  Parameter reduction:
+    Full fine-tune: 16.7M params for one weight matrix
+    LoRA r=16:      4096×16 + 16×4096 = 131K params  ← 128× fewer!
+
+QLoRA = LoRA + 4-bit quantized base model:
+  Base model loaded in NF4 (Normal Float 4-bit)  → ~4× less VRAM
+  LoRA adapters remain in bfloat16               → high-precision gradients
+  Double quantization: quantize the quantization constants too → further savings
+
+  Llama-3 8B full fine-tune:  ~120 GB VRAM (8× A100)
+  Llama-3 8B QLoRA:           ~10 GB VRAM (single RTX 3090!)
+    </pre></div>
+    <p><strong>LoRA/QLoRA training is Python-only</strong> (PEFT + bitsandbytes require PyTorch). As a JS developer you: use AutoTrain to run LoRA (shown in Block 3), then consume the merged model via the HF Inference API or Ollama.</p>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Using a LoRA-fine-tuned model from JS</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// After training completes, the adapter is merged and pushed to Hub
+// The merged model behaves like any normal Hub model</span>
+
+<span class="cm">// Option A — HF Inference API (cloud, no GPU needed)</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+<span class="kw">const</span> hf = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+
+<span class="kw">const</span> result = <span class="kw">await</span> hf.<span class="fn">chatCompletion</span>({
+  model:    <span class="str">"my-org/llama-3-lora-merged"</span>,   <span class="cm">// your merged LoRA model on Hub</span>
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Help me with a support ticket."</span> }],
+  max_tokens: <span class="num">300</span>,
+});
+
+<span class="cm">// Option B — Transformers.js (local, small models only)</span>
+<span class="cm">// Convert merged model to ONNX first:
+//   pip install optimum  →  optimum-cli export onnx --model my-org/lora-merged ./onnx-model</span>
+<span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+<span class="kw">const</span> gen = <span class="kw">await</span> <span class="fn">pipeline</span>(<span class="str">"text-generation"</span>, <span class="str">"my-org/llama-3-lora-merged"</span>);
+
+<span class="cm">// Option C — Ollama (local GGUF, any size)
+// Convert to GGUF:
+//   pip install llama.cpp  →  python convert_hf_to_gguf.py ./merged-model
+// Then: ollama create my-model -f Modelfile  →  ollama run my-model</span>
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+<span class="kw">const</span> ollama = <span class="kw">new</span> <span class="cl">OpenAI</span>({ baseURL: <span class="str">"http://localhost:11434/v1"</span>, apiKey: <span class="str">"ollama"</span> });
+<span class="kw">const</span> chat   = <span class="kw">await</span> ollama.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"my-model"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Help me with a support ticket."</span> }],
+});</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Instead of retraining all 7 billion parameters, LoRA adds tiny adapter matrices (A × B) that are 128× smaller than the original weight matrices. QLoRA freezes the base model in 4-bit to save VRAM and trains only the adapters in fp16. Result: fine-tune a 7B model on a single 16GB consumer GPU in 30–60 minutes at near-identical quality.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: Quantization -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">5</div>
+    <div><div class="bh-title">Quantization</div><div class="bh-sub">INT8 · INT4 · GPTQ · GGUF · AWQ — run large models on small hardware</div></div>
+  </div>
+  <div class="block-body">
+    <p>Quantization reduces model weight precision from 16-bit float to 8-bit or 4-bit integers. This cuts VRAM and RAM by 2–4×, increases throughput, and enables edge/consumer deployment — at a small quality cost.</p>
+    <div class="diagram"><pre>
+Precision comparison:
+
+  float32  (FP32):  4 bytes/param  →  7B model = 28 GB  (training baseline)
+  bfloat16 (BF16):  2 bytes/param  →  7B model = 14 GB  (standard inference)
+  int8     (INT8):  1 byte/param   →  7B model =  7 GB  (minimal quality loss)
+  int4     (INT4):  0.5 bytes/param →  7B model =  3.5 GB (noticeable but acceptable)
+
+Quality degradation (typical):
+  BF16 → INT8:  perplexity +0.1–0.5%   (barely noticeable)
+  BF16 → INT4:  perplexity +2–5%       (acceptable for most tasks)
+  BF16 → INT2:  perplexity +15–30%     (significant degradation)
+
+Post-Training Quantization (PTQ) formats:
+  GPTQ    — weight-only INT4, GPU-optimised, calibrated on small dataset
+  GGUF    — llama.cpp format, CPU-friendly, mixed precision layers, used by Ollama
+  AWQ     — Activation-aware, smarter than GPTQ, preserves important channels
+  INT8 (bitsandbytes) — dynamic activation quantization at inference time
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Quantized Models from JS — Ollama + HF Inference API</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// ── GGUF via Ollama (best for local JS development) ───────────────────</span>
+<span class="cm">// 1. Install Ollama: https://ollama.com</span>
+<span class="cm">// 2. Pull a model (auto-downloads GGUF Q4_K_M by default):</span>
+<span class="cm">//    ollama pull llama3.2        # 2GB — Llama 3.2 3B Q4</span>
+<span class="cm">//    ollama pull mistral         # 4GB — Mistral 7B Q4</span>
+<span class="cm">//    ollama pull qwen2.5:14b     # 9GB — Qwen 2.5 14B Q4</span>
+
+<span class="kw">import</span> OpenAI <span class="kw">from</span> <span class="str">"openai"</span>;
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">OpenAI</span>({
+  baseURL: <span class="str">"http://localhost:11434/v1"</span>,
+  apiKey:  <span class="str">"ollama"</span>,
+});
+
+<span class="cm">// Identical API to OpenAI — just change baseURL and model name</span>
+<span class="kw">const</span> response = <span class="kw">await</span> client.chat.completions.<span class="fn">create</span>({
+  model:    <span class="str">"llama3.2"</span>,        <span class="cm">// or "mistral", "qwen2.5:14b", etc.</span>
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"Explain GPTQ quantization."</span> }],
+  stream:   <span class="kw">false</span>,
+});
+console.<span class="fn">log</span>(response.choices[<span class="num">0</span>].message.content);
+
+<span class="cm">// ── GPTQ / AWQ pre-quantized models via HF Inference API ─────────────</span>
+<span class="cm">// Models ending in "-GPTQ" or "-AWQ" on HF Hub are pre-quantized.</span>
+<span class="cm">// Use them the same way as any other model via the Inference API:</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+<span class="kw">const</span> hf  = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+<span class="kw">const</span> res = <span class="kw">await</span> hf.<span class="fn">chatCompletion</span>({
+  model:      <span class="str">"TheBloke/Llama-2-7B-Chat-GPTQ"</span>,  <span class="cm">// INT4 GPTQ — 4× smaller than FP16</span>
+  messages:   [{ role: <span class="str">"user"</span>, content: <span class="str">"Hi"</span> }],
+  max_tokens: <span class="num">100</span>,
+});
+
+<span class="cm">// ── Transformers.js — quantized via ONNX quantization ─────────────────</span>
+<span class="cm">// Models on Hub under "Xenova/*" are ONNX-exported (often INT8-quantized)</span>
+<span class="kw">import</span> { pipeline } <span class="kw">from</span> <span class="str">"@xenova/transformers"</span>;
+<span class="cm">// dtype: "q8" (INT8), "q4" (INT4), "fp16", "fp32"</span>
+<span class="kw">const</span> gen = <span class="kw">await</span> <span class="fn">pipeline</span>(<span class="str">"text-generation"</span>, <span class="str">"Xenova/Qwen1.5-0.5B-Chat"</span>, { dtype: <span class="str">"q8"</span> });</pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Quantization compresses model weights from 32-bit floats to 4-bit integers — cutting memory 8× and making models runnable on consumer hardware. Quality loss is typically 3–7%. For JavaScript: Transformers.js supports dtype:"q8", and Ollama automatically downloads pre-quantised GGUF model files.</div>
+  </div>
+</div>
+
+<!-- BLOCK 6: Model Alignment -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">6</div>
+    <div><div class="bh-title">Model Alignment — RLHF, DPO &amp; SFT</div><div class="bh-sub">From capable but unsafe to helpful, harmless, and honest</div></div>
+  </div>
+  <div class="block-body">
+    <p>A <strong>base model</strong> (pre-trained on raw text) can complete text but doesn't follow instructions safely. Alignment transforms it into a helpful assistant that refuses harmful requests and gives useful responses.</p>
+    <div class="diagram"><pre>
+Alignment Pipeline:
+
+  ┌──────────────────┐    SFT     ┌─────────────────────┐
+  │   Base Model     │───────────▶│   SFT Model         │
+  │  (pre-trained)   │            │  follows instructions│
+  └──────────────────┘            └──────────┬──────────┘
+                                              │
+                                    RLHF or DPO
+                                              │
+                                              ▼
+                                  ┌─────────────────────┐
+                                  │   Aligned Model      │
+                                  │  helpful + harmless  │
+                                  └─────────────────────┘
+
+RLHF (Reinforcement Learning from Human Feedback):
+  1. Collect human preference data: {prompt, response_A, response_B, preferred: A}
+  2. Train a Reward Model (RM) to predict human preferences
+  3. Use PPO (Proximal Policy Optimization) to fine-tune the SFT model
+     to maximise RM score while staying close to SFT baseline (KL penalty)
+  → Complex, unstable training. Requires large preference datasets.
+
+DPO (Direct Preference Optimisation):
+  1. Same preference data: {prompt, chosen_response, rejected_response}
+  2. ONE fine-tuning step — no separate reward model needed
+  3. Loss: increase log-prob of chosen, decrease log-prob of rejected
+  → Simpler, more stable. GPT-4 class models often use DPO variants.
+
+RLAIF (RL from AI Feedback):
+  Replace human annotators with a strong LLM (e.g., Claude) to generate
+  preference labels at scale. Used in Constitutional AI (Anthropic).
+    </pre></div>
+    <p><strong>DPO/RLHF training is Python-only</strong> (TRL + PyTorch). As a JS developer you prepare preference data, trigger training via AutoTrain, then consume the aligned model.</p>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Build preference dataset &amp; trigger DPO via AutoTrain (JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Preference dataset format: {prompt, chosen, rejected}</span>
+<span class="kw">const</span> preferences = [
+  {
+    prompt:   <span class="str">"How do I fix a bug?"</span>,
+    chosen:   <span class="str">"First, identify the root cause by reading error logs. Then add a test that reproduces the bug before fixing it."</span>,
+    rejected: <span class="str">"Just try different things until it works."</span>,
+  },
+  <span class="cm">// … more examples</span>
+];
+
+<span class="cm">// Upload to Hub (same uploadFile pattern as Block 3)</span>
+<span class="kw">const</span> jsonl = preferences.<span class="fn">map</span>(r => <span class="cl">JSON</span>.<span class="fn">stringify</span>(r)).<span class="fn">join</span>(<span class="str">"\n"</span>);
+
+<span class="cm">// Trigger DPO training via AutoTrain API</span>
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://huggingface.co/api/autotrain/create"</span>, {
+  method:  <span class="str">"POST"</span>,
+  headers: { <span class="str">"Authorization"</span>: <span class="str">`Bearer <span class="kw">${process.env.HF_TOKEN}</span>`</span>, <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span> },
+  body: <span class="cl">JSON</span>.<span class="fn">stringify</span>({
+    project_name: <span class="str">"my-dpo-job"</span>,
+    task:         <span class="str">"llm-dpo"</span>,
+    base_model:   <span class="str">"my-org/my-sft-model"</span>,   <span class="cm">// start from SFT model</span>
+    dataset:      <span class="str">"my-org/preference-data"</span>,
+    params: { beta: <span class="num">0.1</span>, learning_rate: <span class="num">5e-7</span>, num_train_epochs: <span class="num">1</span> },
+  }),
+});
+
+<span class="cm">// ── Use the aligned model from JS ────────────────────────────────────</span>
+<span class="cm">// DPO-aligned models on the Hub behave like any other model — just call them normally</span>
+<span class="kw">import</span> { HfInference } <span class="kw">from</span> <span class="str">"@huggingface/inference"</span>;
+<span class="kw">const</span> hf     = <span class="kw">new</span> <span class="cl">HfInference</span>(process.env.<span class="cl">HF_TOKEN</span>);
+<span class="kw">const</span> answer = <span class="kw">await</span> hf.<span class="fn">chatCompletion</span>({
+  model:    <span class="str">"my-org/my-dpo-job"</span>,
+  messages: [{ role: <span class="str">"user"</span>, content: <span class="str">"How do I fix a bug?"</span> }],
+});
+<span class="cm">// Returns the "chosen"-style response — more thoughtful and structured</span>
+
+<span class="cm">// DPO loss (conceptual reference):
+// L = -E[ log σ( β × [ (logπ(chosen|x) - logπ_ref(chosen|x))
+//                     - (logπ(rejected|x) - logπ_ref(rejected|x)) ] ) ]
+// The model learns to increase P(chosen) and decrease P(rejected)
+// relative to the SFT reference baseline (controlled by β)</span></pre>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Method</th><th>Complexity</th><th>Data needed</th><th>GPU hours (7B)</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td>SFT</td><td>Low</td><td>1k–100k (instruction, response) pairs</td><td>2–8h on 1×A100</td><td>Teaching new task format/domain</td></tr>
+        <tr><td>DPO</td><td>Medium</td><td>1k–50k (prompt, chosen, rejected) triples</td><td>4–16h on 1×A100</td><td>Style, safety, preference alignment</td></tr>
+        <tr><td>RLHF (PPO)</td><td>High</td><td>10k+ preference pairs + RM training</td><td>40–200h on 8×A100</td><td>Fine-grained reward shaping</td></tr>
+        <tr><td>RLAIF</td><td>Medium</td><td>Automated via LLM judge — scales to millions</td><td>4–20h on 1×A100</td><td>Large-scale alignment, constitutional AI</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> SFT (instruction tuning) teaches format and task behaviour. DPO trains on chosen/rejected pairs — simpler and more stable than PPO-RLHF. RLHF with PPO achieves the highest quality but needs 4× the VRAM and a separate reward model. For open-source fine-tuning on a budget: start with SFT, then add DPO for preference alignment.</div>
+  </div>
+</div>
+
+<!-- BLOCK 7: Decision Tree — When to Use What -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">7</div>
+    <div><div class="bh-title">Decision Tree — Fine-tune vs RAG vs Prompting</div><div class="bh-sub">Choosing the right adaptation strategy</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+                      Do you need up-to-date / private data?
+                                    │
+                    ┌───────────────┴───────────────┐
+                   YES                              NO
+                    │                                │
+                    ▼                                ▼
+         ──── Use RAG ────                   Is the problem with
+         (Module 4 patterns)               HOW the model responds?
+         Fresh knowledge,                  (format/style/domain)
+         no GPU needed,                          │
+         citable sources.               ┌────────┴────────┐
+                                       YES               NO
+                                        │                 │
+                                        ▼                 ▼
+                               Do you have            Try prompt
+                               labelled examples?    engineering first
+                               (1k+ pairs)           (Module 3)
+                                    │
+                         ┌──────────┴──────────┐
+                        YES                    NO
+                         │                     │
+                         ▼                     ▼
+              ──── Fine-tune ────          Few-shot prompts
+              (SFT → DPO/RLHF)          or RAG with examples
+              For consistent output
+              style, safety, domain
+              adaptation.
+
+Fine-tune when:                         RAG when:
+  ✓ Style/format must be exact           ✓ Knowledge needs to be current
+  ✓ Domain has custom vocabulary         ✓ Sources must be citable
+  ✓ Latency-critical (no retrieval step) ✓ Low-to-zero training budget
+  ✓ You own the infrastructure           ✓ Data is too large to fine-tune on
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Three tools for different problems: prompting is free and instant but limited by context size; RAG adds external knowledge without any training; fine-tuning permanently changes the model's behaviour. Start with prompting, add RAG when you need current or private knowledge, and reach for fine-tuning only when RAG + prompting hit a quality ceiling.</div>
+    <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:12px 16px;margin-top:14px;font-size:12px;color:#94a3b8">
+      <span style="font-weight:700;color:#22d3ee">→ Cross-reference:</span> For a deeper scenario-by-scenario decision guide — which model type, which retrieval strategy, when to use agents vs chains, API vs self-hosted — see <a href="when-to-use.html" style="color:#22d3ee">Module 10 · When to Use What</a> (Block 2).
+    </div>
+  </div>
+</div>
+
+<!-- EDGE CASES -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">!</div>
+    <div><div class="bh-title">Edge Cases &amp; Failure Modes</div><div class="bh-sub">The traps that break fine-tuning experiments</div></div>
+  </div>
+  <div class="block-body">
+    <div class="edge-grid">
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">💀</div>
+        <div class="edge-title">Catastrophic Forgetting</div>
+        <div class="edge-desc">SFT on a narrow domain makes the model forget general capabilities. Ask it to write Python after fine-tuning on medical text — quality collapses.</div>
+        <div class="edge-fix">Use LoRA (base weights frozen). Mix general instruction data with domain data (5–10% general). Evaluate on general benchmarks after each epoch.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">🎭</div>
+        <div class="edge-title">Reward Hacking (RLHF)</div>
+        <div class="edge-desc">Model learns to maximise reward model score, not actual quality. Produces verbose, sycophantic responses. Reward model exploited by adversarial outputs.</div>
+        <div class="edge-fix">KL penalty (beta) to keep policy near SFT baseline. Periodically retrain reward model on new data. Use DPO instead — inherently more stable.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">📊</div>
+        <div class="edge-title">Training Data Quality</div>
+        <div class="edge-desc">A fine-tuned model is only as good as its training data. Noisy labels, inconsistent formatting, or bad responses in SFT data directly harm quality.</div>
+        <div class="edge-fix">Deduplicate, filter length outliers, manually review 100+ samples. Use LLM judge to score training response quality before including.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">📉</div>
+        <div class="edge-title">Quantization Quality Cliff</div>
+        <div class="edge-desc">4-bit quantization works well for most tasks but collapses on long-form reasoning, math, or structured output where precision matters most.</div>
+        <div class="edge-fix">Benchmark before deploying. Prefer AWQ models over GPTQ at the same bit depth — better quality. For Ollama use <code>ollama pull model:q8_0</code> to pull INT8 instead of the default Q4.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">⚙️</div>
+        <div class="edge-title">LoRA Rank Too Low</div>
+        <div class="edge-desc">r=4 can't capture complex style changes. Fine-tuned model reverts to base behaviour on held-out examples — under-fitting.</div>
+        <div class="edge-fix">Start with r=16. Scale to r=64 if quality is insufficient. Monitor training loss — it should decrease smoothly, not plateau immediately.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">💬</div>
+        <div class="edge-title">Chat Template Mismatch</div>
+        <div class="edge-desc">Training used Llama-3 template (&lt;|eot_id|&gt;) but inference uses wrong template or none. Model produces garbled output or doesn't stop generating.</div>
+        <div class="edge-fix">In Transformers.js use <code>tokenizer.apply_chat_template()</code>. For Ollama/HF Inference API, pass messages in the standard roles format — the server applies the template automatically.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-l">LOW</span>
+        <div class="edge-icon">📦</div>
+        <div class="edge-title">VRAM OOM During Training</div>
+        <div class="edge-desc">Gradient accumulation doesn't free memory. Batch size 1 with long sequences still OOM. Mixed precision saves VRAM but doubles gradient compute.</div>
+        <div class="edge-fix">When using AutoTrain, set <code>gradient_checkpointing: true</code>, reduce <code>max_seq_length</code>, or pick a smaller base model. For Transformers.js use <code>dtype: "q4"</code> quantization to cut memory usage.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-l">LOW</span>
+        <div class="edge-icon">⚖️</div>
+        <div class="edge-title">License Violations</div>
+        <div class="edge-desc">Many "open" models have non-commercial licences (LLaMA 3 commercial use requires Meta approval above 700M MAU). Fine-tuned derivatives inherit restrictions.</div>
+        <div class="edge-fix">Check Hub model card before using commercially. Prefer Apache 2.0 (Qwen 2.5, Mistral 7B) or MIT licensed models for unrestricted use.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Common open-source pitfalls: licence confusion (Llama 3 has usage restrictions — use Qwen 2.5 or Mistral for unrestricted commercial use), tokenizer mismatch (always load the tokenizer shipped with the exact model checkpoint), and VRAM overestimation (4-bit quantised 7B needs ~6GB, not 14GB — people consistently over-provision hardware).</div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 7 of 12 — ← <a href="production.html" style="color:#f472b6">Module 6 · Production</a> | <a href="trends.html" style="color:#facc15">Module 8 · Trends &amp; Emerging Architectures →</a></footer>
+</body>
+</html>

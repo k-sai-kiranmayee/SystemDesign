@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 4 — RAG &amp; LangChain</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1 · Foundations</a>
+  <a href="architecture.html">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API &amp; Prompts</a>
+  <a href="rag-langchain.html" class="active">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html">6 · Production</a>
+  <a href="open-source.html">7 · Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step active" style="color:#3ecf8e;border-color:#3ecf8e">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(62,207,142,.12);border:1px solid rgba(62,207,142,.35);color:#3ecf8e">Module 4 — RAG &amp; LangChain</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#3ecf8e,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Retrieval-Augmented Generation &amp; LCEL</h1>
+  <p>Overcome LLM knowledge cutoffs and hallucination with vector stores, document retrieval, LangChain chains, and RAGAS evaluation. Builds on <a href="api-prompts.html" style="color:#3ecf8e">Module 3 API patterns</a>; used by <a href="agents.html" style="color:#22d3ee">Module 5 Agents</a>.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- BLOCK 1: LLM Limitations -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">1</div>
+    <div><div class="bh-title">LLM Limitations — Why RAG Exists</div><div class="bh-sub">Knowledge cutoff · Hallucination · Context constraints</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card red">
+        <div class="mc-icon">📅</div>
+        <div class="mc-title">Knowledge Cutoff</div>
+        <div class="mc-body">Training data has a fixed end date. GPT-4 knows nothing about events after April 2023. You cannot ask it about last week's news or your internal docs.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-icon">🎭</div>
+        <div class="mc-title">Hallucination</div>
+        <div class="mc-body">LLMs generate plausible-sounding text even when they don't know the answer. They confidently fabricate citations, statistics, and facts.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-icon">📏</div>
+        <div class="mc-title">Context Window Limit</div>
+        <div class="mc-body">Even 128k-token windows can't hold an entire knowledge base. You must selectively retrieve what's relevant instead of stuffing everything in.</div>
+      </div>
+      <div class="mini-card blue">
+        <div class="mc-icon">🔒</div>
+        <div class="mc-title">Private / Proprietary Data</div>
+        <div class="mc-body">Your internal Confluence, Jira, codebase, or customer data was never in training data. Fine-tuning is expensive; retrieval is cheaper and fresher.</div>
+      </div>
+      <div class="mini-card cyan">
+        <div class="mc-icon">⚖️</div>
+        <div class="mc-title">Reasoning Gaps</div>
+        <div class="mc-body">LLMs struggle with multi-step arithmetic, latest API specs, and exact facts. Grounding with retrieved evidence dramatically reduces errors.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-icon">🔄</div>
+        <div class="mc-title">Stale Fine-Tuned Models</div>
+        <div class="mc-body">Fine-tuning encodes knowledge statically. Updates require re-training. RAG lets you update the knowledge base without touching the model.</div>
+      </div>
+    </div>
+    <div class="diagram"><pre>
+LLM ALONE:
+  User: "What is our Q3 revenue?"
+  LLM:  "I don't have access to your financial data." (honest)
+         or "Your Q3 revenue was $14.2M" (hallucinated — dangerous)
+
+LLM + RAG:
+  User: "What is our Q3 revenue?"
+  Retrieval: fetch relevant docs from your vector DB
+  LLM:  "According to the Q3 earnings report (retrieved), revenue was $14.2M"
+         Source: [finance/q3-2024.pdf, page 4]  ← citable, verifiable
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> LLMs are frozen at their training cutoff and cannot see your private data. RAG fixes this by fetching relevant documents at query time and passing them to the model as context — like an open-book exam instead of closed-book. The model's job becomes "answer using these specific paragraphs", which is far more reliable than relying on memorised training data.</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: RAG Architecture E2E -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">2</div>
+    <div><div class="bh-title">RAG Architecture — End to End</div><div class="bh-sub">Indexing pipeline + Query pipeline</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+═══════════════════════════════ INDEXING PIPELINE (offline) ═══════════════════════════════
+
+  Raw Documents              Load              Chunk              Embed              Store
+  ┌───────────┐           ┌────────┐        ┌────────┐        ┌────────┐        ┌────────┐
+  │ PDF / MD  │──────────▶│Loaders │───────▶│Splitter│───────▶│Embed   │───────▶│Vector  │
+  │ HTML / DB │           │        │        │        │        │Model   │        │Store   │
+  │ CSV / API │           └────────┘        └────────┘        └────────┘        └────────┘
+  └───────────┘         (DocLoader)       (TextSplitter)   (OpenAI/local)   (Chroma/FAISS)
+
+═══════════════════════════════ QUERY PIPELINE (online) ═══════════════════════════════════
+
+  User Query
+      │
+      ▼
+  ┌──────────┐    embed     ┌──────────┐   top-k    ┌──────────┐
+  │  Query   │─────────────▶│  Vector  │───────────▶│Retrieved │
+  │  Text    │              │  Store   │            │  Chunks  │
+  └──────────┘              └──────────┘            └──────────┘
+                                                         │
+                              ┌──────────────────────────┘
+                              │  Build prompt:
+                              │  [System] You are a helpful assistant.
+                              │  [Context] {retrieved chunks}
+                              │  [User] {original query}
+                              ▼
+                         ┌──────────┐
+                         │   LLM    │──────▶  Final Answer + Citations
+                         └──────────┘
+    </pre></div>
+    <p>Two distinct phases: <strong>Indexing</strong> (done once / periodically) converts your documents into searchable embeddings. <strong>Querying</strong> (every user request) retrieves relevant chunks and passes them to the LLM as context.</p>
+    <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.25);border-left:3px solid #3ecf8e;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13px;color:#cbd5e1">
+      <strong style="color:#3ecf8e">🔍 What the "Embed Model" box actually does:</strong>
+      <p style="margin:8px 0 0 0">The embed step in both pipelines is <em>not</em> a simple lookup — it is a full <strong>encoder Transformer forward pass</strong> (e.g., BERT-base, <code>text-embedding-ada-002</code>, <code>all-MiniLM-L6-v2</code>):</p>
+      <div style="font-family:'Courier New',monospace;font-size:12px;color:#94a3b8;margin:8px 0;line-height:1.8">
+        text chunk / query<br>
+        &nbsp;&nbsp;↓ Tokenizer (of the embedding model)<br>
+        Token IDs<br>
+        &nbsp;&nbsp;↓ Static token lookup + positional encoding<br>
+        Token vectors<br>
+        &nbsp;&nbsp;↓ <strong style="color:#3ecf8e">Bidirectional self-attention × N layers</strong> ← full Transformer Architecture<br>
+        Contextual token vectors<br>
+        &nbsp;&nbsp;↓ Pool ([CLS] token or mean pool all tokens)<br>
+        Single fixed-size vector [384 / 768 / 1536-dim]  →  stored in vector DB
+      </div>
+      <p style="margin:4px 0 0 0">This is completely separate from the LLM's internal token embedding lookup. The encoder uses <strong>bidirectional attention</strong> (sees all tokens simultaneously) vs the LLM decoder which uses causal attention (sees only past tokens). Both the indexing and querying steps must use the <em>same</em> embedding model — they must live in the same vector space for cosine similarity to be meaningful.</p>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Two phases: indexing (one-time setup — split docs into chunks, run each chunk through an encoder Transformer to get a vector, store in a vector database) and querying (per request — run the question through the same encoder, find matching chunk vectors, pass the text to the LLM). The embed step is a full Transformer forward pass, not just a lookup table.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: Document Loading & Chunking -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">3</div>
+    <div><div class="bh-title">Document Loading &amp; Chunking Strategies</div><div class="bh-sub">The quality of retrieval starts here</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>LangChain Document Loaders:</strong></p>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Document Loaders (LangChain JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { PDFLoader }          <span class="kw">from</span> <span class="str">"@langchain/community/document_loaders/fs/pdf"</span>;
+<span class="kw">import</span> { CheerioWebBaseLoader } <span class="kw">from</span> <span class="str">"@langchain/community/document_loaders/web/cheerio"</span>;
+<span class="kw">import</span> { CSVLoader }           <span class="kw">from</span> <span class="str">"@langchain/community/document_loaders/fs/csv"</span>;
+<span class="kw">import</span> { NotionLoader }        <span class="kw">from</span> <span class="str">"@langchain/community/document_loaders/fs/notion"</span>;
+
+<span class="cm">// PDF — loads each page as a Document</span>
+<span class="kw">const</span> pdfLoader = <span class="kw">new</span> <span class="cl">PDFLoader</span>(<span class="str">"./docs/report.pdf"</span>);
+<span class="kw">const</span> pdfDocs   = <span class="kw">await</span> pdfLoader.<span class="fn">load</span>();
+<span class="cm">// [{ pageContent: "...", metadata: { source, pdf: { page } } }, ...]</span>
+
+<span class="cm">// Web page — HTML → text via Cheerio</span>
+<span class="kw">const</span> webLoader = <span class="kw">new</span> <span class="cl">CheerioWebBaseLoader</span>(<span class="str">"https://example.com/docs"</span>);
+<span class="kw">const</span> webDocs   = <span class="kw">await</span> webLoader.<span class="fn">load</span>();
+
+<span class="cm">// Each Document has: { pageContent: string, metadata: Record&lt;string,any&gt; }</span></pre>
+    </div>
+    <p style="margin-top:14px"><strong>Chunking strategies — choosing the right one matters:</strong></p>
+    <table class="data-table" style="margin-bottom:16px">
+      <thead><tr><th>Strategy</th><th>How it works</th><th>Best for</th><th>Pitfall</th></tr></thead>
+      <tbody>
+        <tr><td>Fixed-size (character)</td><td>Split every N characters with optional overlap</td><td>Generic text, fast baseline</td><td>Cuts mid-sentence; loses coherence</td></tr>
+        <tr><td>Recursive character</td><td>Try splitting on \n\n, \n, " " in order; keep chunks ≤ N chars</td><td>Most text documents (recommended default)</td><td>Still not semantics-aware</td></tr>
+        <tr><td>Token-based</td><td>Split by token count (tiktoken); aligns with model limits</td><td>When you need precise token budgets</td><td>Slower; tokenizer dependency</td></tr>
+        <tr><td>Semantic / sentence</td><td>Embed sentences; split when cosine similarity drops</td><td>Coherent paragraphs, QA tasks</td><td>Slow; variable chunk sizes</td></tr>
+        <tr><td>Markdown / HTML aware</td><td>Respect headers, code blocks, tags as boundaries</td><td>Structured docs, code repos</td><td>Requires format-specific splitter</td></tr>
+        <tr><td>Parent-child (hierarchical)</td><td>Index small child chunks; retrieve parent for context</td><td>Long docs with precise answers</td><td>More complex retrieval logic</td></tr>
+      </tbody>
+    </table>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>RecursiveCharacterTextSplitter (LangChain JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { RecursiveCharacterTextSplitter } <span class="kw">from</span> <span class="str">"langchain/text_splitter"</span>;
+
+<span class="kw">const</span> splitter = <span class="kw">new</span> <span class="cl">RecursiveCharacterTextSplitter</span>({
+  chunkSize:    <span class="num">1000</span>,   <span class="cm">// max characters per chunk</span>
+  chunkOverlap: <span class="num">200</span>,    <span class="cm">// overlap to preserve context across boundaries</span>
+  separators: [<span class="str">"\n\n"</span>, <span class="str">"\n"</span>, <span class="str">" "</span>, <span class="str">""</span>],  <span class="cm">// tries these in order</span>
+});
+
+<span class="kw">const</span> chunks = <span class="kw">await</span> splitter.<span class="fn">splitDocuments</span>(pdfDocs);
+<span class="cm">// Returns Document[] — each chunk preserves metadata from parent</span>
+console.<span class="fn">log</span>(chunks[<span class="num">0</span>]);
+<span class="cm">// { pageContent: "...1000 chars...", metadata: { source: "report.pdf", loc: { ... } } }</span></pre>
+    </div>
+    <div class="diagram"><pre>
+chunkOverlap = 200 example:
+
+Original text: [============================== 2000 chars ==============================]
+
+Chunk 1:        [==== 1000 ====]
+Chunk 2:              [===200===][==== 800 ====]
+Chunk 3:                               [===200===][==== 800 ====]
+
+The 200-char overlap means a sentence cut at a boundary still appears
+in the next chunk — ensuring retrieval can find the full thought.
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Chunking is the art of cutting documents into searchable pieces. Too small loses surrounding context; too large includes irrelevant content. Overlapping windows (e.g. 200-char overlap) prevent important sentences from being split across boundaries and getting lost during retrieval.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: Vector Stores & Embeddings -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">4</div>
+    <div><div class="bh-title">Embeddings &amp; Vector Stores</div><div class="bh-sub">Semantic search infrastructure</div></div>
+  </div>
+  <div class="block-body">
+    <p>An <strong>embedding</strong> converts text into a dense numerical vector (e.g., 1536 dims for OpenAI ada-002) such that semantically similar texts have high cosine similarity. Vector stores index these vectors for fast approximate nearest-neighbour (ANN) search.</p>
+    <div style="background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.25);border-left:3px solid #4f8ef7;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13px;color:#cbd5e1">
+      <strong style="color:#4f8ef7">⚠️ RAG embeddings ≠ LLM's internal token embeddings — they are fundamentally different:</strong>
+      <table class="data-table" style="margin:10px 0 0 0">
+        <thead><tr><th>Property</th><th>RAG chunk embedding</th><th>LLM token embedding (internal)</th></tr></thead>
+        <tbody>
+          <tr><td>Produced by</td><td>Encoder Transformer — full bidirectional forward pass</td><td>Static weight matrix lookup — zero computation</td></tr>
+          <tr><td>Context-aware?</td><td>✅ Yes — all tokens see each other</td><td>❌ No — context-free, fixed per token ID</td></tr>
+          <tr><td>Granularity</td><td>One vector per document chunk (pooled)</td><td>One vector per sub-word token</td></tr>
+          <tr><td>Typical dimension</td><td>384 / 768 / 1536</td><td>d_model of the LLM — 768 to 4096+</td></tr>
+          <tr><td>Purpose</td><td>Semantic similarity search — find relevant chunks</td><td>Convert token IDs → float space for TA to process</td></tr>
+          <tr><td>Stored externally?</td><td>Yes — persisted in vector DB</td><td>No — computed per LLM forward pass, ephemeral</td></tr>
+          <tr><td>Example</td><td>text-embedding-ada-002, all-MiniLM-L6-v2, BGE</td><td>First layer of GPT-4 / Llama / Claude (every LLM)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diagram"><pre>
+Text → Embedding Model → Vector (float[1536])
+
+"dog bites man"  → [0.12, -0.43, 0.87, ..., 0.22]
+"man bit by dog" → [0.11, -0.44, 0.85, ..., 0.23]  ← similar!
+"quantum physics" → [0.93,  0.12, -0.54, ..., -0.67]  ← distant
+
+cosine_similarity("dog bites man", "man bit by dog") ≈ 0.97
+cosine_similarity("dog bites man", "quantum physics") ≈ 0.12
+    </pre></div>
+    <table class="data-table" style="margin-bottom:16px">
+      <thead><tr><th>Store</th><th>Type</th><th>Best for</th><th>JS Client</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Chroma</td><td>Open-source, in-process</td><td>Local dev, prototyping</td><td>chromadb</td><td>Zero-infra, persists to disk</td></tr>
+        <tr><td>FAISS</td><td>Open-source, in-memory</td><td>Offline batch search</td><td>faiss-node</td><td>No persistence; fastest ANN</td></tr>
+        <tr><td>Pinecone</td><td>Managed cloud</td><td>Production scale</td><td>@pinecone-database/pinecone</td><td>Serverless; built-in metadata filter</td></tr>
+        <tr><td>Weaviate</td><td>Open-source / cloud</td><td>Hybrid search</td><td>weaviate-client</td><td>GraphQL API; built-in BM25</td></tr>
+        <tr><td>Qdrant</td><td>Open-source / cloud</td><td>High-perf production</td><td>@qdrant/js-client-rest</td><td>Payload filtering, snapshots</td></tr>
+        <tr><td>pgvector</td><td>Postgres extension</td><td>Existing Postgres users</td><td>pg + pgvector</td><td>SQL + vector in one DB</td></tr>
+      </tbody>
+    </table>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Embeddings + Chroma (LangChain JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { OpenAIEmbeddings }   <span class="kw">from</span> <span class="str">"@langchain/openai"</span>;
+<span class="kw">import</span> { Chroma }             <span class="kw">from</span> <span class="str">"@langchain/community/vectorstores/chroma"</span>;
+
+<span class="kw">const</span> embeddings = <span class="kw">new</span> <span class="cl">OpenAIEmbeddings</span>({ model: <span class="str">"text-embedding-3-small"</span> });
+
+<span class="cm">// ── Index (done once) ──────────────────────────────────────────────────</span>
+<span class="kw">const</span> vectorStore = <span class="kw">await</span> Chroma.<span class="fn">fromDocuments</span>(
+  chunks,       <span class="cm">// Document[] from splitter</span>
+  embeddings,
+  { collectionName: <span class="str">"my-docs"</span>, url: <span class="str">"http://localhost:8000"</span> }
+);
+
+<span class="cm">// ── Query (every request) ─────────────────────────────────────────────</span>
+<span class="kw">const</span> retriever = vectorStore.<span class="fn">asRetriever</span>({ k: <span class="num">5</span> });  <span class="cm">// top-5 chunks</span>
+
+<span class="kw">const</span> relevantDocs = <span class="kw">await</span> retriever.<span class="fn">invoke</span>(<span class="str">"What is our refund policy?"</span>);
+<span class="cm">// relevantDocs: Document[] — top-5 most similar chunks</span>
+
+<span class="cm">// Similarity search with score (distance)</span>
+<span class="kw">const</span> withScores = <span class="kw">await</span> vectorStore.<span class="fn">similaritySearchWithScore</span>(
+  <span class="str">"refund policy"</span>, <span class="num">3</span>
+);
+<span class="cm">// [[doc, 0.87], [doc, 0.81], [doc, 0.74]]</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> A vector store is a semantic search engine. You turn each chunk into a number array (embedding) and store it. At query time, you turn the question into a number array and find the chunks whose arrays are mathematically closest — this finds conceptually similar text without needing exact keyword matches.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: LangChain LCEL -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">5</div>
+    <div><div class="bh-title">LangChain &amp; LCEL</div><div class="bh-sub">LangChain Expression Language — composable chains via the pipe operator</div></div>
+  </div>
+  <div class="block-body">
+    <p>LCEL (LangChain Expression Language) uses the <code>|</code> pipe operator to compose <strong>Runnables</strong> — anything that implements <code>.invoke()</code>, <code>.stream()</code>, and <code>.batch()</code>. The result is a composable, streamable, parallelizable chain.</p>
+    <div class="diagram"><pre>
+LCEL Runnable Interface:
+  invoke(input)  → output           (single call)
+  stream(input)  → AsyncIterator    (streaming tokens)
+  batch([...])   → output[]         (parallel calls)
+
+LCEL Pipe:
+  chain = A | B | C
+  chain.invoke(x)  ≡  C.invoke(B.invoke(A.invoke(x)))
+
+Core Runnables:
+  PromptTemplate    → formats a string using variables
+  ChatOpenAI        → sends messages to OpenAI, returns AIMessage
+  StrOutputParser   → extracts .content string from AIMessage
+  RunnablePassthrough → passes input through unchanged (useful for merging)
+  RunnableParallel  → runs multiple runnables in parallel, merges outputs
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>LCEL — Basic Chain</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { ChatOpenAI }         <span class="kw">from</span> <span class="str">"@langchain/openai"</span>;
+<span class="kw">import</span> { PromptTemplate }     <span class="kw">from</span> <span class="str">"@langchain/core/prompts"</span>;
+<span class="kw">import</span> { StrOutputParser }    <span class="kw">from</span> <span class="str">"@langchain/core/output_parsers"</span>;
+
+<span class="kw">const</span> prompt = PromptTemplate.<span class="fn">fromTemplate</span>(
+  <span class="str">"Answer the following question: {question}"</span>
+);
+
+<span class="kw">const</span> model  = <span class="kw">new</span> <span class="cl">ChatOpenAI</span>({ model: <span class="str">"gpt-4o-mini"</span>, temperature: <span class="num">0</span> });
+<span class="kw">const</span> parser = <span class="kw">new</span> <span class="cl">StrOutputParser</span>();
+
+<span class="kw">const</span> chain  = prompt <span class="kw">|</span> model <span class="kw">|</span> parser;  <span class="cm">// LCEL pipe</span>
+
+<span class="kw">const</span> result = <span class="kw">await</span> chain.<span class="fn">invoke</span>({ question: <span class="str">"What is 2+2?"</span> });
+<span class="cm">// "4"</span>
+
+<span class="cm">// Streaming</span>
+<span class="kw">for await</span> (<span class="kw">const</span> chunk <span class="kw">of</span> <span class="kw">await</span> chain.<span class="fn">stream</span>({ question: <span class="str">"What is 2+2?"</span> })) {
+  process.stdout.<span class="fn">write</span>(chunk);
+}</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>LCEL — Full RAG Chain</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { RunnablePassthrough, RunnableSequence } <span class="kw">from</span> <span class="str">"@langchain/core/runnables"</span>;
+<span class="kw">import</span> { ChatPromptTemplate } <span class="kw">from</span> <span class="str">"@langchain/core/prompts"</span>;
+
+<span class="kw">const</span> ragPrompt = ChatPromptTemplate.<span class="fn">fromMessages</span>([
+  [<span class="str">"system"</span>, <span class="str">"You are a helpful assistant. Use ONLY the context below.\n\nContext:\n{context}"</span>],
+  [<span class="str">"human"</span>,  <span class="str">"{question}"</span>],
+]);
+
+<span class="cm">// Format retrieved docs into a single string</span>
+<span class="kw">const</span> <span class="fn">formatDocs</span> = (docs) =&gt; docs.<span class="fn">map</span>(d =&gt; d.pageContent).<span class="fn">join</span>(<span class="str">"\n\n"</span>);
+
+<span class="kw">const</span> ragChain = RunnableSequence.<span class="fn">from</span>([
+  {
+    context:  retriever.<span class="fn">pipe</span>(<span class="fn">formatDocs</span>),  <span class="cm">// retrieve → format</span>
+    question: <span class="kw">new</span> <span class="cl">RunnablePassthrough</span>(),    <span class="cm">// pass question through</span>
+  },
+  ragPrompt,
+  model,
+  parser,
+]);
+
+<span class="kw">const</span> answer = <span class="kw">await</span> ragChain.<span class="fn">invoke</span>(<span class="str">"What is our refund policy?"</span>);
+console.<span class="fn">log</span>(answer);  <span class="cm">// grounded answer from retrieved docs</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> LCEL is LangChain's pipe operator for connecting steps: prompt | llm | parser. Each component's output becomes the next one's input. The full RAG chain is just two connected components — retriever and generator — replacing pages of boilerplate glue code.</div>
+  </div>
+</div>
+
+<!-- BLOCK 6: Prompts & Output Parsers -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">6</div>
+    <div><div class="bh-title">Prompts &amp; Output Parsers</div><div class="bh-sub">Structured prompt templates and typed outputs</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <p><strong>Prompt Template Types:</strong></p>
+        <ul class="body-list">
+          <li><strong>PromptTemplate:</strong> single string with {variables}</li>
+          <li><strong>ChatPromptTemplate:</strong> list of (role, template) pairs for chat models</li>
+          <li><strong>FewShotPromptTemplate:</strong> dynamically inserts examples from an example selector</li>
+          <li><strong>MessagesPlaceholder:</strong> inserts a list of messages (e.g., chat history)</li>
+        </ul>
+      </div>
+      <div>
+        <p><strong>Output Parser Types:</strong></p>
+        <ul class="body-list">
+          <li><strong>StrOutputParser:</strong> extracts .content as plain string</li>
+          <li><strong>JsonOutputParser:</strong> parses model JSON response into JS object</li>
+          <li><strong>StructuredOutputParser:</strong> validates JSON against a Zod schema</li>
+          <li><strong>CommaSeparatedListOutputParser:</strong> splits comma-delimited text into array</li>
+        </ul>
+      </div>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Structured Output with Zod</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { z }                      <span class="kw">from</span> <span class="str">"zod"</span>;
+<span class="kw">import</span> { StructuredOutputParser }  <span class="kw">from</span> <span class="str">"langchain/output_parsers"</span>;
+<span class="kw">import</span> { ChatPromptTemplate }      <span class="kw">from</span> <span class="str">"@langchain/core/prompts"</span>;
+
+<span class="kw">const</span> schema = z.<span class="fn">object</span>({
+  sentiment: z.<span class="fn">enum</span>([<span class="str">"positive"</span>, <span class="str">"negative"</span>, <span class="str">"neutral"</span>]),
+  confidence: z.<span class="fn">number</span>().<span class="fn">min</span>(<span class="num">0</span>).<span class="fn">max</span>(<span class="num">1</span>),
+  reasons: z.<span class="fn">array</span>(z.<span class="fn">string</span>()),
+});
+
+<span class="kw">const</span> outputParser = StructuredOutputParser.<span class="fn">fromZodSchema</span>(schema);
+
+<span class="kw">const</span> prompt = ChatPromptTemplate.<span class="fn">fromMessages</span>([
+  [<span class="str">"system"</span>, <span class="str">"Analyse the sentiment.\n{format_instructions}"</span>],
+  [<span class="str">"human"</span>, <span class="str">"{text}"</span>],
+]);
+
+<span class="kw">const</span> chain = prompt <span class="kw">|</span> model <span class="kw">|</span> outputParser;
+
+<span class="kw">const</span> result = <span class="kw">await</span> chain.<span class="fn">invoke</span>({
+  text: <span class="str">"I love this product but shipping was slow."</span>,
+  format_instructions: outputParser.<span class="fn">getFormatInstructions</span>(),
+});
+<span class="cm">// { sentiment: "positive", confidence: 0.72, reasons: ["loves product", "slow shipping"] }</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Output parsers bridge free-text LLM responses and the structured data your app needs. Instead of fragile regex on "The sentiment is positive, confidence 72%", you define a schema (Zod or similar) and LangChain ensures the response is parsed into it — plus automatically retries if the format is wrong.</div>
+  </div>
+</div>
+
+<!-- BLOCK 7: Retrieval Strategies -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">7</div>
+    <div><div class="bh-title">Advanced Retrieval Strategies</div><div class="bh-sub">MMR · Hybrid BM25+vector · Multi-query · Self-query</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="mini-card blue">
+        <div class="mc-title">MMR (Maximal Marginal Relevance)</div>
+        <div class="mc-body">Fetches top-k docs but re-ranks to reduce redundancy. Returns diverse results — relevant AND different from each other. Set lambda: 0=max diversity, 1=max relevance.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-title">Hybrid BM25 + Vector</div>
+        <div class="mc-body">BM25 = keyword matching (exact terms). Vector = semantic matching. Combine scores with RRF (Reciprocal Rank Fusion). Catches both exact product codes and paraphrased questions.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-title">Multi-Query Retrieval</div>
+        <div class="mc-body">LLM rephrases the query 3–5 ways → run each retrieval → deduplicate union. Overcomes retrieval misses caused by specific wording.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-title">Self-Query Retrieval</div>
+        <div class="mc-body">LLM extracts structured filters from natural language. "Show me docs from 2024 tagged 'finance'" → filter: {year:2024, tag:'finance'} + semantic search.</div>
+      </div>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>MMR Retriever + Multi-Query Retriever</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { MultiQueryRetriever }  <span class="kw">from</span> <span class="str">"langchain/retrievers/multi_query"</span>;
+
+<span class="cm">// MMR — diversity-aware retrieval</span>
+<span class="kw">const</span> mmrRetriever = vectorStore.<span class="fn">asRetriever</span>({
+  searchType: <span class="str">"mmr"</span>,
+  searchKwargs: { fetchK: <span class="num">20</span>, lambda: <span class="num">0.5</span> },  <span class="cm">// fetch 20, return 5</span>
+  k: <span class="num">5</span>,
+});
+
+<span class="cm">// Multi-Query — rephrase question multiple ways then union results</span>
+<span class="kw">const</span> mqRetriever = MultiQueryRetriever.<span class="fn">fromLLM</span>({
+  llm:       model,
+  retriever: vectorStore.<span class="fn">asRetriever</span>({ k: <span class="num">5</span> }),
+  verbose:   <span class="kw">true</span>,   <span class="cm">// logs generated sub-queries</span>
+});
+
+<span class="kw">const</span> docs = <span class="kw">await</span> mqRetriever.<span class="fn">invoke</span>(<span class="str">"How does billing work for enterprise?"</span>);
+<span class="cm">// Internally generates:
+//  "enterprise billing model"
+//  "how are enterprise customers charged"
+//  "pricing structure for large companies"
+// → runs all 3 retrievals → deduplicates → returns union</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Basic cosine search returns the K most similar chunks — but they may all say the same thing. MMR adds diversity by penalising redundant results. Multi-query generates alternative phrasings of your question to catch documents that use different vocabulary for the same concept. These two additions alone give 15–25% quality improvement.</div>
+    <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px;color:#94a3b8">
+      <span style="font-weight:700;color:#22d3ee">→ Cross-reference:</span> For a direct side-by-side comparison of Naive RAG vs Advanced RAG (hybrid search, cross-encoder reranking, query expansion) with architectural diagrams, see <a href="comparison.html#comparison-6" style="color:#22d3ee">Module 9 · Comparison 6</a>. For a scenario decision table (when to use each strategy), see <a href="when-to-use.html" style="color:#22d3ee">Module 10 · Block 3</a>.
+    </div>
+  </div>
+</div>
+
+<!-- BLOCK 8: Conversational RAG with Memory -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">8</div>
+    <div><div class="bh-title">Conversational RAG with Chat History</div><div class="bh-sub">Multi-turn context-aware retrieval</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+Problem with naive RAG in conversations:
+  Turn 1: "What is the refund policy?"         → retrieval works fine
+  Turn 2: "How long does IT take?"             → "it" = refund? shipping? unclear
+                                               → semantic search on "it" → wrong results
+
+Solution: Contextualise the query first:
+  Turn 2 → LLM rephrases → "How long does the refund process take?" → retrieval → answer
+
+  ┌────────────┐    ┌────────────────┐    ┌────────────┐    ┌─────┐    ┌──────┐
+  │Chat History│───▶│ Contextualise  │───▶│  Retrieve  │───▶│ RAG │───▶│Reply │
+  │+ New Query │    │ Query LLM call │    │  (vector)  │    │chain│    │      │
+  └────────────┘    └────────────────┘    └────────────┘    └─────┘    └──────┘
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>Conversational RAG Chain</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { createHistoryAwareRetriever }     <span class="kw">from</span> <span class="str">"langchain/chains/history_aware_retriever"</span>;
+<span class="kw">import</span> { createRetrievalChain }            <span class="kw">from</span> <span class="str">"langchain/chains/retrieval"</span>;
+<span class="kw">import</span> { createStuffDocumentsChain }       <span class="kw">from</span> <span class="str">"langchain/chains/combine_documents"</span>;
+<span class="kw">import</span> { MessagesPlaceholder }             <span class="kw">from</span> <span class="str">"@langchain/core/prompts"</span>;
+<span class="kw">import</span> { HumanMessage, AIMessage }         <span class="kw">from</span> <span class="str">"@langchain/core/messages"</span>;
+
+<span class="cm">// Step 1: Contextualise the user query given chat history</span>
+<span class="kw">const</span> contextualisePrompt = ChatPromptTemplate.<span class="fn">fromMessages</span>([
+  [<span class="str">"system"</span>, <span class="str">"Given the chat history and the latest user question, reformulate it as a standalone question."</span>],
+  <span class="kw">new</span> <span class="cl">MessagesPlaceholder</span>(<span class="str">"chat_history"</span>),
+  [<span class="str">"human"</span>, <span class="str">"{input}"</span>],
+]);
+<span class="kw">const</span> historyAwareRetriever = <span class="kw">await</span> <span class="fn">createHistoryAwareRetriever</span>({
+  llm: model, retriever, rephrasePrompt: contextualisePrompt,
+});
+
+<span class="cm">// Step 2: QA prompt with context</span>
+<span class="kw">const</span> qaPrompt = ChatPromptTemplate.<span class="fn">fromMessages</span>([
+  [<span class="str">"system"</span>, <span class="str">"Answer using the context below.\n\n{context}"</span>],
+  <span class="kw">new</span> <span class="cl">MessagesPlaceholder</span>(<span class="str">"chat_history"</span>),
+  [<span class="str">"human"</span>, <span class="str">"{input}"</span>],
+]);
+<span class="kw">const</span> qaChain     = <span class="kw">await</span> <span class="fn">createStuffDocumentsChain</span>({ llm: model, prompt: qaPrompt });
+<span class="kw">const</span> ragChain    = <span class="kw">await</span> <span class="fn">createRetrievalChain</span>({ retriever: historyAwareRetriever, combineDocsChain: qaChain });
+
+<span class="cm">// Usage</span>
+<span class="kw">const</span> chatHistory = [];
+<span class="kw">const</span> q1 = <span class="kw">await</span> ragChain.<span class="fn">invoke</span>({ input: <span class="str">"What is the refund policy?"</span>, chat_history: chatHistory });
+chatHistory.<span class="fn">push</span>(<span class="kw">new</span> <span class="cl">HumanMessage</span>(<span class="str">"What is the refund policy?"</span>), <span class="kw">new</span> <span class="cl">AIMessage</span>(q1.answer));
+
+<span class="kw">const</span> q2 = <span class="kw">await</span> ragChain.<span class="fn">invoke</span>({ input: <span class="str">"How long does it take?"</span>, chat_history: chatHistory });
+<span class="cm">// "it" is contextualised → "How long does the refund process take?"</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Standard RAG treats every question in isolation. Conversational RAG first rewrites the question to be self-contained given the chat history, then retrieves. That is why a follow-up "How long does it take?" correctly becomes "How long does the refund process take?" — the model understands the pronoun from context.</div>
+  </div>
+</div>
+
+<!-- BLOCK 9: Evaluating RAG — RAGAS -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">9</div>
+    <div><div class="bh-title">Evaluating RAG — RAGAS Metrics</div><div class="bh-sub">Quantify retrieval quality and answer faithfulness</div></div>
+  </div>
+  <div class="block-body">
+    <div class="diagram"><pre>
+RAGAS Evaluation Framework:
+
+  Given: { question, answer, context[], ground_truth }
+
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │  Metric               What it measures           Range  Target       │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │  Faithfulness         Is the answer supported     0–1    > 0.8       │
+  │                       by the retrieved context?                      │
+  │  Answer Relevance     Is the answer relevant       0–1    > 0.8       │
+  │                       to the question?                               │
+  │  Context Recall       Are all necessary facts      0–1    > 0.7       │
+  │                       in the retrieved context?                      │
+  │  Context Precision    Are retrieved docs actually  0–1    > 0.7       │
+  │                       needed? (no noise)                             │
+  │  Answer Correctness   Is the answer factually      0–1    > 0.7       │
+  │                       correct vs ground truth?                       │
+  └──────────────────────────────────────────────────────────────────────┘
+
+  Faithfulness LOW  → LLM hallucinating beyond the context
+  Context Recall LOW → Retriever missing important chunks
+  Context Precision LOW → Too many irrelevant chunks polluting the prompt
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>LangSmith Evaluation — JS-native RAG evaluation</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// npm install langsmith  (also see Module 6 for full LangSmith setup)</span>
+<span class="cm">// LANGCHAIN_TRACING_V2=true  LANGCHAIN_API_KEY=lsv2_pt_xxx  LANGCHAIN_PROJECT=rag-eval</span>
+<span class="kw">import</span> { evaluate }   <span class="kw">from</span> <span class="str">"langsmith/evaluation"</span>;
+<span class="kw">import</span> { Client }     <span class="kw">from</span> <span class="str">"langsmith"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">Client</span>();
+
+<span class="cm">// Target: the RAG chain to evaluate</span>
+<span class="kw">const</span> <span class="fn">target</span> = (input) => ragChain.<span class="fn">invoke</span>(input.question);
+
+<span class="cm">// Custom evaluators (mirroring RAGAS metrics)</span>
+<span class="kw">const</span> <span class="fn">faithfulnessEval</span> = <span class="kw">async</span> ({ inputs, outputs }) => {
+  <span class="cm">// Use an LLM judge to check if the answer is grounded in the retrieved context</span>
+  <span class="kw">const</span> judgment = <span class="kw">await</span> llmJudge.<span class="fn">invoke</span>(
+    <span class="str">`Context: <span class="kw">${outputs.context}</span>\nAnswer: <span class="kw">${outputs.answer}</span>\nIs the answer fully supported by the context? Reply YES or NO.`</span>
+  );
+  <span class="kw">return</span> { key: <span class="str">"faithfulness"</span>, score: judgment.content.<span class="fn">includes</span>(<span class="str">"YES"</span>) ? <span class="num">1</span> : <span class="num">0</span> };
+};
+
+<span class="kw">const</span> <span class="fn">exactMatch</span> = ({ outputs, referenceOutputs }) =>
+  ({ key: <span class="str">"exact_match"</span>, score: outputs.answer === referenceOutputs.answer ? <span class="num">1</span> : <span class="num">0</span> });
+
+<span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">evaluate</span>(target, {
+  data:             <span class="str">"rag-golden-dataset"</span>,  <span class="cm">// dataset name in LangSmith</span>
+  evaluators:       [faithfulnessEval, exactMatch],
+  experimentPrefix: <span class="str">"rag-v2"</span>,
+  maxConcurrency:   <span class="num">4</span>,
+});
+<span class="cm">// Results visible in LangSmith UI: Experiments → rag-v2
+// { faithfulness: 0.92, exact_match: 0.78 }</span></pre>
+    </div>
+    <p style="margin-top:14px"><strong>Improving low RAGAS scores:</strong></p>
+    <table class="data-table">
+      <thead><tr><th>Low metric</th><th>Root cause</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Faithfulness</td><td>LLM adds info not in context</td><td>Stricter system prompt ("ONLY use context"), temperature=0</td></tr>
+        <tr><td>Context Recall</td><td>Relevant chunks not retrieved</td><td>Increase k, try multi-query retriever, fix chunking</td></tr>
+        <tr><td>Context Precision</td><td>Noisy irrelevant chunks</td><td>MMR retriever, metadata filtering, tighter similarity threshold</td></tr>
+        <tr><td>Answer Relevance</td><td>Answer drifts off-topic</td><td>Clearer prompt, few-shot examples, add explicit task instruction</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Faithfulness measures whether the answer is grounded in retrieved documents (no hallucination — 1.0 = fully grounded). Answer relevance measures whether the response actually addresses the question. Both use an LLM as judge. Run these in CI so quality regressions are caught before they reach production.</div>
+  </div>
+</div>
+
+<!-- EDGE CASES -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">!</div>
+    <div><div class="bh-title">Edge Cases &amp; Failure Modes</div><div class="bh-sub">What can silently break your RAG pipeline</div></div>
+  </div>
+  <div class="block-body">
+    <div class="edge-grid">
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">👻</div>
+        <div class="edge-title">Faithfulness Hallucination</div>
+        <div class="edge-desc">LLM answers beyond the retrieved context or uses training knowledge to fill gaps. Appears confident but is fabricated.</div>
+        <div class="edge-fix">Strict system prompt: "Answer ONLY from the provided context. If the answer is not in the context, say 'I don't know'."</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">✂️</div>
+        <div class="edge-title">Chunk Boundary Split</div>
+        <div class="edge-desc">Key sentence split across two chunks. Retrieving chunk A gives incomplete info. Chunk B alone also lacks context.</div>
+        <div class="edge-fix">Use chunkOverlap (200+ chars). Parent-document retriever: index small chunks but return full parent doc.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">🔢</div>
+        <div class="edge-title">Embedding Mismatch (Index vs Query)</div>
+        <div class="edge-desc">Indexed with model A (e.g., ada-002). Queried with model B (e.g., text-embedding-3-small). Vectors are incompatible — completely wrong results.</div>
+        <div class="edge-fix">Record embedding model name in metadata. Enforce same model for index and query. Re-index if model changes.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">📊</div>
+        <div class="edge-title">Table / Structured Data Loss</div>
+        <div class="edge-desc">PDF tables converted to flat text lose row/column relationships. Semantic search on "revenue Q3" may retrieve the right page but wrong cell.</div>
+        <div class="edge-fix">Use tabular extractors (tabula-js). Store table as markdown with column headers. Tag metadata: {type: "table"}.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">🌊</div>
+        <div class="edge-title">Context Window Overflow</div>
+        <div class="edge-desc">Retrieved k=10 chunks × 1000 chars = 10,000 chars. Plus prompt, history, and system message → exceed model context limit → truncation or error.</div>
+        <div class="edge-fix">Reduce k, reduce chunkSize. Use LongContextReorder: put most relevant chunks first (recency bias in LLMs).</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">🔄</div>
+        <div class="edge-title">Stale Index</div>
+        <div class="edge-desc">Documents updated but vector store not re-indexed. LLM answers based on outdated chunks. Especially harmful in policy/price docs.</div>
+        <div class="edge-fix">Store doc hash + last_updated in metadata. On doc update, delete old vectors by doc_id and re-embed. Schedule incremental re-indexing.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-l">LOW</span>
+        <div class="edge-icon">🈳</div>
+        <div class="edge-title">Language Mismatch</div>
+        <div class="edge-desc">Docs in English, query in French. Embedding models are multilingual (e5-multilingual) but may still underperform vs same-language retrieval.</div>
+        <div class="edge-fix">Translate query to doc language before embedding, or use dedicated multilingual embeddings (multilingual-e5-large).</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-l">LOW</span>
+        <div class="edge-icon">🧩</div>
+        <div class="edge-title">Lost-in-the-Middle</div>
+        <div class="edge-desc">LLMs perform better on information near the start or end of the context. Middle chunks are effectively ignored even if highly relevant.</div>
+        <div class="edge-fix">Use LongContextReorder to place most relevant chunks at start and end. Reduce k to minimise middle context.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> The most common RAG failure is not bad retrieval — it is relevant documents getting retrieved but the LLM ignoring them (lost-in-the-middle effect). Always put the most relevant chunks first and last in the prompt. Metadata filtering (date range, document type) is often more important than vector similarity for precision tasks like legal or financial Q&A.</div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 4 of 12 — ← <a href="api-prompts.html" style="color:#3ecf8e">Module 3 · API &amp; Prompts</a> | <a href="agents.html" style="color:#3ecf8e">Module 5 · Agentic AI &amp; LangGraph →</a></footer>
+</body>
+</html>

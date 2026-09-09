@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 6 — Production, LangSmith &amp; MCP</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html">🏠 Home</a><span class="sep">›</span>
+  <a href="how-llm-works.html">0 · How It Works</a>
+  <a href="foundations.html">1 · Foundations</a>
+  <a href="architecture.html">2 · Architecture</a>
+  <a href="api-prompts.html">3 · API &amp; Prompts</a>
+  <a href="rag-langchain.html">4 · RAG</a>
+  <a href="agents.html">5 · Agents</a>
+  <a href="production.html" class="active">6 · Production</a>
+  <a href="open-source.html">7 · Fine-tuning</a>
+  <a href="trends.html">8·Trends</a>
+  <a href="comparison.html">9·Compare</a>
+  <a href="when-to-use.html">10·When?</a>
+  <a href="rag-pdf.html">11 · PDF RAG</a>
+  <a href="rag-pdf-summary.html">12 · PDF Summary</a>
+</nav>
+
+<div class="flow-bar">
+  <a href="how-llm-works.html" class="fb-step">0·How It Works</a><span class="fb-arr">→</span>
+  <a href="foundations.html" class="fb-step">1·Foundations</a><span class="fb-arr">→</span>
+  <a href="architecture.html" class="fb-step">2·Architecture</a><span class="fb-arr">→</span>
+  <a href="api-prompts.html" class="fb-step">3·API</a><span class="fb-arr">→</span>
+  <a href="rag-langchain.html" class="fb-step">4·RAG</a><span class="fb-arr">→</span>
+  <a href="agents.html" class="fb-step">5·Agents</a><span class="fb-arr">→</span>
+  <a href="production.html" class="fb-step active" style="color:#a78bfa;border-color:#a78bfa">6·Production</a><span class="fb-arr">→</span>
+  <a href="open-source.html" class="fb-step">7·Fine-tuning</a><span class="fb-arr">→</span>
+  <a href="trends.html" class="fb-step">8·Trends</a><span class="fb-arr">→</span>
+  <a href="comparison.html" class="fb-step">9·Compare</a><span class="fb-arr">→</span>  <a href="when-to-use.html" class="fb-step">10·When?</a><span class="fb-arr">→</span>
+  <a href="rag-pdf.html" class="fb-step">11·PDF RAG</a><span class="fb-arr">→</span>
+  <a href="rag-pdf-summary.html" class="fb-step">12·PDF Summary</a>
+</div>
+
+<div class="hero">
+  <div class="badge" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#a78bfa">Module 6 — Production</div>
+  <h1 class="hero-title" style="background:linear-gradient(90deg,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">LangSmith, MCP &amp; A2A Protocols</h1>
+  <p>Observe, debug and evaluate agents with LangSmith. Connect models to external data via MCP. Coordinate agents with the A2A protocol. Wraps up the full stack from <a href="agents.html" style="color:#a78bfa">Module 5</a>.</p>
+</div>
+
+<section>
+<div class="container">
+
+<!-- BLOCK 1: LangSmith Overview -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(167,139,250,.2);color:#a78bfa">1</div>
+    <div><div class="bh-title">LangSmith — Observability for LLM Apps</div><div class="bh-sub">Tracing · Evals · Datasets · Prompt management</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>LangSmith</strong> is LangChain's observability platform for LLM applications. Every LLM call, tool invocation, and chain step is captured as a hierarchical <em>run trace</em> you can inspect, compare, and evaluate.</p>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card purple">
+        <div class="mc-icon">🔍</div>
+        <div class="mc-title">Tracing</div>
+        <div class="mc-body">Automatic capture of inputs, outputs, latency, and token counts for every step in your LangChain/LangGraph app. Zero-code setup via env vars.</div>
+      </div>
+      <div class="mini-card blue">
+        <div class="mc-icon">📊</div>
+        <div class="mc-title">Evaluations</div>
+        <div class="mc-body">Run automated evals over a dataset. Compare prompt versions. Detect regressions. LLM-as-judge or custom Python evaluators.</div>
+      </div>
+      <div class="mini-card green">
+        <div class="mc-icon">📁</div>
+        <div class="mc-title">Datasets</div>
+        <div class="mc-body">Curate labelled examples from production traces. Build golden test sets. Replay runs for regression testing across model versions.</div>
+      </div>
+      <div class="mini-card orange">
+        <div class="mc-icon">✏️</div>
+        <div class="mc-title">Prompt Hub</div>
+        <div class="mc-body">Version and manage prompts centrally. Pull prompts by name in code (pull("my-prompt:v2")). A/B test variants. Non-engineers can iterate prompts without code deploys.</div>
+      </div>
+      <div class="mini-card cyan">
+        <div class="mc-icon">🧪</div>
+        <div class="mc-title">Playground</div>
+        <div class="mc-body">Replay any production trace with modified prompts/models interactively. Immediately see how changes affect output without deploying code.</div>
+      </div>
+      <div class="mini-card pink">
+        <div class="mc-icon">📈</div>
+        <div class="mc-title">Monitoring</div>
+        <div class="mc-body">Live dashboards for token usage, latency percentiles (p50/p95/p99), error rates, and feedback scores by tag, project, and model version.</div>
+      </div>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>LangSmith Setup &amp; Tracing</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// 1. Enable tracing via environment variables (no code changes needed)</span>
+<span class="cm">// LANGCHAIN_TRACING_V2=true</span>
+<span class="cm">// LANGCHAIN_API_KEY=lsv2_pt_xxxxxxx</span>
+<span class="cm">// LANGCHAIN_PROJECT=my-rag-app  ← groups traces by project</span>
+
+<span class="cm">// All LangChain/LangGraph calls are now automatically traced.</span>
+<span class="cm">// View at: https://smith.langchain.com</span>
+
+<span class="cm">// 2. Add custom metadata to traces</span>
+<span class="kw">import</span> { traceable } <span class="kw">from</span> <span class="str">"langsmith/traceable"</span>;
+
+<span class="kw">const</span> myTracedFunction = <span class="fn">traceable</span>(
+  <span class="kw">async</span> (question: <span class="kw">string</span>) => {
+    <span class="kw">const</span> result = <span class="kw">await</span> ragChain.<span class="fn">invoke</span>(question);
+    <span class="kw">return</span> result;
+  },
+  {
+    name: <span class="str">"rag-query"</span>,
+    run_type: <span class="str">"chain"</span>,
+    tags: [<span class="str">"production"</span>, <span class="str">"v2"</span>],
+    metadata: { user_tier: <span class="str">"enterprise"</span> },
+  }
+);
+
+<span class="cm">// 3. Attach user feedback to a run</span>
+<span class="kw">import</span> { Client } <span class="kw">from</span> <span class="str">"langsmith"</span>;
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">Client</span>();
+
+<span class="kw">await</span> client.<span class="fn">createFeedback</span>(run_id, <span class="str">"thumbs"</span>, {
+  score:   <span class="num">1</span>,       <span class="cm">// 1 = 👍, 0 = 👎</span>
+  comment: <span class="str">"Perfect answer, saved me an hour"</span>,
+});</pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>LangSmith Evaluation over a Dataset</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { evaluate }             <span class="kw">from</span> <span class="str">"langsmith/evaluation"</span>;
+<span class="kw">import</span> { LangChainStringEvaluator } <span class="kw">from</span> <span class="str">"langchain/evaluation"</span>;
+
+<span class="cm">// Target function to evaluate</span>
+<span class="kw">const</span> <span class="fn">target</span> = (input) => ragChain.<span class="fn">invoke</span>(input.question);
+
+<span class="cm">// Evaluators</span>
+<span class="kw">const</span> exactMatch = ({ outputs, referenceOutputs }) =>
+  outputs.answer === referenceOutputs.answer ? { key: <span class="str">"exact_match"</span>, score: <span class="num">1</span> } : { key: <span class="str">"exact_match"</span>, score: <span class="num">0</span> };
+
+<span class="kw">const</span> evalResult = <span class="kw">await</span> <span class="fn">evaluate</span>(target, {
+  data:       <span class="str">"my-qa-dataset"</span>,  <span class="cm">// dataset name in LangSmith</span>
+  evaluators: [exactMatch],
+  experimentPrefix: <span class="str">"rag-v2"</span>,
+  maxConcurrency: <span class="num">4</span>,
+});
+<span class="cm">// Results appear in LangSmith UI under Experiments</span></pre>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> LangSmith is the flight recorder for your LLM app. Every prompt, response, latency, and token count gets logged as a trace. When something breaks in production — wrong answer, unexpected tool call, cost spike — you open LangSmith and see exactly what happened at each step. Evaluation datasets let you run regression tests after model or prompt changes.</div>
+  </div>
+</div>
+
+<!-- BLOCK 2: MCP Fundamentals -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(34,211,238,.2);color:#22d3ee">2</div>
+    <div><div class="bh-title">Model Context Protocol (MCP) — Fundamentals</div><div class="bh-sub">Standardised interface: AI models ↔ external data &amp; tools</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>MCP</strong> (Model Context Protocol) is an open standard (by Anthropic) that defines how AI models connect to external data sources, tools, and services — using a consistent client-server protocol instead of bespoke integrations.</p>
+    <div class="diagram"><pre>
+MCP Architecture:
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    HOST APPLICATION                          │
+  │  ┌──────────────┐        ┌───────────────────────────────┐  │
+  │  │   AI Model   │        │         MCP CLIENT            │  │
+  │  │  (Claude /   │◀──────▶│  manages connections,         │  │
+  │  │   GPT-4 /    │        │  protocol, tool discovery      │  │
+  │  │   local)     │        └──────────┬────────────────────┘  │
+  │  └──────────────┘                   │  MCP Protocol          │
+  └─────────────────────────────────────┼─────────────────────────┘
+                                        │  (JSON-RPC 2.0 over stdio/SSE)
+              ┌──────────────┬──────────┴──────────┬──────────────┐
+              ▼              ▼                      ▼              ▼
+        ┌──────────┐  ┌──────────┐           ┌──────────┐  ┌──────────┐
+        │MCP Server│  │MCP Server│           │MCP Server│  │MCP Server│
+        │ (Files)  │  │ (GitHub) │           │(Postgres)│  │ (Slack)  │
+        └──────────┘  └──────────┘           └──────────┘  └──────────┘
+
+Each MCP Server exposes:
+  Resources  — read-only data (files, DB records, web pages)
+  Tools      — executable functions (write file, run query, send message)
+  Prompts    — reusable prompt templates with arguments
+    </pre></div>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="mini-card cyan">
+        <div class="mc-icon">📄</div>
+        <div class="mc-title">Resources</div>
+        <div class="mc-body">URI-addressable read-only data. file://path/to/doc, db://table/row, git://repo/branch/path. Model reads context from resources.</div>
+      </div>
+      <div class="mini-card blue">
+        <div class="mc-icon">🔧</div>
+        <div class="mc-title">Tools</div>
+        <div class="mc-body">Functions the model can call: create_file, run_sql_query, send_slack_message. Each tool has a JSON Schema for arguments — same as OpenAI function calling.</div>
+      </div>
+      <div class="mini-card purple">
+        <div class="mc-icon">💬</div>
+        <div class="mc-title">Prompts</div>
+        <div class="mc-body">Server-defined prompt templates with arguments. Model requests "code_review" prompt with {language:"TypeScript", style:"strict"} — server returns the rendered system prompt.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> MCP is a USB-C standard for connecting AI models to data sources and tools. Before MCP, every app needed a custom integration for every tool. With MCP, any MCP-compatible model can use any MCP-compatible server — GitHub, databases, file systems — with zero custom glue code. Build the server once, and it works with all MCP clients.</div>
+  </div>
+</div>
+
+<!-- BLOCK 3: MCP Server Implementation -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(62,207,142,.2);color:#3ecf8e">3</div>
+    <div><div class="bh-title">Building an MCP Server</div><div class="bh-sub">Define tools &amp; resources, expose via stdio or HTTP/SSE</div></div>
+  </div>
+  <div class="block-body">
+    <div class="code-wrap">
+      <div class="code-hdr"><span>MCP Server (Node.js — @modelcontextprotocol/sdk)</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { Server }        <span class="kw">from</span> <span class="str">"@modelcontextprotocol/sdk/server/index.js"</span>;
+<span class="kw">import</span> { StdioServerTransport } <span class="kw">from</span> <span class="str">"@modelcontextprotocol/sdk/server/stdio.js"</span>;
+<span class="kw">import</span> { ListToolsRequestSchema, CallToolRequestSchema } <span class="kw">from</span> <span class="str">"@modelcontextprotocol/sdk/types.js"</span>;
+
+<span class="kw">const</span> server = <span class="kw">new</span> <span class="cl">Server</span>(
+  { name: <span class="str">"my-db-server"</span>, version: <span class="str">"1.0.0"</span> },
+  { capabilities: { tools: {}, resources: {} } }
+);
+
+<span class="cm">// Declare available tools</span>
+server.<span class="fn">setRequestHandler</span>(ListToolsRequestSchema, <span class="kw">async</span> () => ({
+  tools: [{
+    name: <span class="str">"run_query"</span>,
+    description: <span class="str">"Execute a read-only SQL query against the analytics database"</span>,
+    inputSchema: {
+      type: <span class="str">"object"</span>,
+      properties: {
+        sql:    { type: <span class="str">"string"</span>, description: <span class="str">"SQL SELECT statement"</span> },
+        limit:  { type: <span class="str">"number"</span>, description: <span class="str">"Max rows"</span>, default: <span class="num">100</span> },
+      },
+      required: [<span class="str">"sql"</span>],
+    },
+  }],
+}));
+
+<span class="cm">// Handle tool calls</span>
+server.<span class="fn">setRequestHandler</span>(CallToolRequestSchema, <span class="kw">async</span> (request) => {
+  <span class="kw">if</span> (request.params.name === <span class="str">"run_query"</span>) {
+    <span class="kw">const</span> { sql, limit = <span class="num">100</span> } = request.params.arguments;
+    <span class="kw">const</span> rows = <span class="kw">await</span> db.<span class="fn">query</span>(sql, limit);  <span class="cm">// your DB client</span>
+    <span class="kw">return</span> { content: [{ type: <span class="str">"text"</span>, text: JSON.<span class="fn">stringify</span>(rows, <span class="kw">null</span>, <span class="num">2</span>) }] };
+  }
+  <span class="kw">throw new</span> <span class="cl">Error</span>(<span class="str">"Unknown tool"</span>);
+});
+
+<span class="cm">// Start server (communicates via stdin/stdout)</span>
+<span class="kw">const</span> transport = <span class="kw">new</span> <span class="cl">StdioServerTransport</span>();
+<span class="kw">await</span> server.<span class="fn">connect</span>(transport);
+<span class="cm">// Run as: node server.js  (Claude Desktop / Claude Code auto-starts it)</span></pre>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>MCP Client — Connect to a server</span><span class="code-lang">JS</span></div>
+      <pre><span class="kw">import</span> { Client }               <span class="kw">from</span> <span class="str">"@modelcontextprotocol/sdk/client/index.js"</span>;
+<span class="kw">import</span> { StdioClientTransport }  <span class="kw">from</span> <span class="str">"@modelcontextprotocol/sdk/client/stdio.js"</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="cl">Client</span>({ name: <span class="str">"my-client"</span>, version: <span class="str">"1.0.0"</span> }, { capabilities: {} });
+
+<span class="kw">const</span> transport = <span class="kw">new</span> <span class="cl">StdioClientTransport</span>({
+  command: <span class="str">"node"</span>, args: [<span class="str">"./my-db-server.js"</span>],
+});
+<span class="kw">await</span> client.<span class="fn">connect</span>(transport);
+
+<span class="cm">// Discover tools</span>
+<span class="kw">const</span> { tools } = <span class="kw">await</span> client.<span class="fn">listTools</span>();
+console.<span class="fn">log</span>(tools.<span class="fn">map</span>(t => t.name));  <span class="cm">// ["run_query"]</span>
+
+<span class="cm">// Call a tool</span>
+<span class="kw">const</span> result = <span class="kw">await</span> client.<span class="fn">callTool</span>({
+  name: <span class="str">"run_query"</span>,
+  arguments: { sql: <span class="str">"SELECT * FROM orders WHERE status='pending' LIMIT 5"</span> },
+});
+console.<span class="fn">log</span>(result.content[<span class="num">0</span>].text);  <span class="cm">// JSON rows</span></pre>
+    </div>
+    <div class="diagram"><pre>
+MCP Transport Options:
+
+  stdio (default)     — subprocess communication; Claude Desktop uses this
+                        simple, secure (isolated process), local only
+
+  HTTP + SSE          — server-sent events for streaming; supports remote MCP servers
+                        GET  /sse         → opens SSE stream (server→client)
+                        POST /message     → client sends requests
+
+  WebSocket (planned) — bidirectional streaming; better for high-frequency updates
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> You define tools (functions the model can call), resources (data the model can read), and prompts (templates the model can request). The server communicates via stdio for local use or HTTP+SSE for remote. Once deployed, any MCP client discovers your tools automatically — no per-client integration code needed.</div>
+  </div>
+</div>
+
+<!-- BLOCK 4: MCP Configuration -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(245,158,11,.2);color:#f59e0b">4</div>
+    <div><div class="bh-title">MCP Configuration &amp; Claude Desktop</div><div class="bh-sub">claude_desktop_config.json — connecting models to servers</div></div>
+  </div>
+  <div class="block-body">
+    <p>Claude Desktop (and Claude Code) auto-launch MCP servers defined in <code>claude_desktop_config.json</code>. Each server entry specifies how to start it and any environment variables it needs.</p>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>claude_desktop_config.json</span><span class="code-lang">JSON</span></div>
+      <pre>{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"filesystem"</span>: {
+      <span class="str">"command"</span>: <span class="str">"npx"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-y"</span>, <span class="str">"@modelcontextprotocol/server-filesystem"</span>, <span class="str">"/Users/me/projects"</span>]
+    },
+    <span class="str">"github"</span>: {
+      <span class="str">"command"</span>: <span class="str">"npx"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-y"</span>, <span class="str">"@modelcontextprotocol/server-github"</span>],
+      <span class="str">"env"</span>: { <span class="str">"GITHUB_TOKEN"</span>: <span class="str">"ghp_xxxxxxxx"</span> }
+    },
+    <span class="str">"postgres"</span>: {
+      <span class="str">"command"</span>: <span class="str">"npx"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-y"</span>, <span class="str">"@modelcontextprotocol/server-postgres"</span>],
+      <span class="str">"env"</span>: { <span class="str">"POSTGRES_URL"</span>: <span class="str">"postgresql://user:pass@localhost:5432/mydb"</span> }
+    },
+    <span class="str">"my-custom-server"</span>: {
+      <span class="str">"command"</span>: <span class="str">"node"</span>,
+      <span class="str">"args"</span>: [<span class="str">"/path/to/my-mcp-server/index.js"</span>],
+      <span class="str">"env"</span>: { <span class="str">"API_KEY"</span>: <span class="str">"sk-xxxx"</span> }
+    }
+  }
+}</pre>
+    </div>
+    <p style="margin-top:12px"><strong>Official MCP servers available via npm (selection):</strong></p>
+    <table class="data-table" style="margin-bottom:0">
+      <thead><tr><th>Package</th><th>What it exposes</th></tr></thead>
+      <tbody>
+        <tr><td>@modelcontextprotocol/server-filesystem</td><td>Read/write files in allowed directories</td></tr>
+        <tr><td>@modelcontextprotocol/server-github</td><td>Repos, issues, PRs, file contents via GitHub API</td></tr>
+        <tr><td>@modelcontextprotocol/server-postgres</td><td>Run SQL queries, inspect schema</td></tr>
+        <tr><td>@modelcontextprotocol/server-brave-search</td><td>Web search via Brave Search API</td></tr>
+        <tr><td>@modelcontextprotocol/server-slack</td><td>Read channels, send messages</td></tr>
+        <tr><td>@modelcontextprotocol/server-puppeteer</td><td>Browser automation, screenshot, web scraping</td></tr>
+      </tbody>
+    </table>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Claude Desktop's mcpServers config is a JSON file where each entry is just a shell command that starts an MCP server subprocess. Claude discovers available tools from those servers on startup. Pre-built servers already exist for GitHub, file systems, SQL databases, and Puppeteer — install and configure, no coding required.</div>
+  </div>
+</div>
+
+<!-- BLOCK 5: A2A Protocol -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(244,114,182,.2);color:#f472b6">5</div>
+    <div><div class="bh-title">Agent-to-Agent (A2A) Protocol</div><div class="bh-sub">Google's open standard for inter-agent communication</div></div>
+  </div>
+  <div class="block-body">
+    <p><strong>A2A</strong> (Agent-to-Agent) is Google's open protocol for agents to discover, communicate with, and delegate to other agents across different frameworks and vendors. Where MCP connects agents to <em>data/tools</em>, A2A connects agents to <em>other agents</em>.</p>
+    <div class="diagram"><pre>
+A2A vs MCP:
+  MCP:  Model ←→ Data/Tools (filesystem, DB, APIs)
+  A2A:  Agent ←→ Agent      (peer coordination, delegation)
+
+A2A Core Concepts:
+
+  Agent Card (/.well-known/agent.json)
+  ┌────────────────────────────────────────────────────────────┐
+  │  {                                                          │
+  │    "name": "ResearchAgent",                                 │
+  │    "description": "Searches and summarises web content",   │
+  │    "capabilities": ["text-generation", "web-search"],       │
+  │    "skills": [{ "id": "summarise", "description": "..." }],│
+  │    "url": "https://agents.company.com/research",            │
+  │    "authentication": { "schemes": ["bearer"] }              │
+  │  }                                                          │
+  └────────────────────────────────────────────────────────────┘
+
+  Task Lifecycle:
+  submitted → working → (input-required →) completed / failed / cancelled
+
+  Communication: JSON-RPC 2.0 over HTTP
+    tasks/send          — fire a task at an agent
+    tasks/sendSubscribe — streaming SSE updates (long-running tasks)
+    tasks/get           — poll task status
+    tasks/cancel        — abort a task
+    </pre></div>
+    <div class="code-wrap">
+      <div class="code-hdr"><span>A2A Task Communication (JS)</span><span class="code-lang">JS</span></div>
+      <pre><span class="cm">// Caller agent delegates to a remote specialist agent via A2A</span>
+<span class="kw">const</span> <span class="fn">delegateToResearchAgent</span> = <span class="kw">async</span> (query: <span class="kw">string</span>) => {
+  <span class="kw">const</span> task = {
+    jsonrpc: <span class="str">"2.0"</span>,
+    method: <span class="str">"tasks/send"</span>,
+    id: <span class="fn">crypto</span>.<span class="fn">randomUUID</span>(),
+    params: {
+      id: <span class="fn">crypto</span>.<span class="fn">randomUUID</span>(),
+      message: {
+        role:  <span class="str">"user"</span>,
+        parts: [{ type: <span class="str">"text"</span>, text: query }],
+      },
+    },
+  };
+
+  <span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://agents.company.com/research"</span>, {
+    method:  <span class="str">"POST"</span>,
+    headers: {
+      <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+      <span class="str">"Authorization"</span>: <span class="str">`Bearer <span class="kw">${process.env.AGENT_TOKEN}</span>`</span>,
+    },
+    body: JSON.<span class="fn">stringify</span>(task),
+  });
+
+  <span class="kw">const</span> result = <span class="kw">await</span> response.<span class="fn">json</span>();
+  <span class="cm">// result.result.status = { state: "completed" }</span>
+  <span class="cm">// result.result.artifacts = [{ parts: [{ type: "text", text: "Summary..." }] }]</span>
+  <span class="kw">return</span> result.result.artifacts[<span class="num">0</span>].parts[<span class="num">0</span>].text;
+};
+
+<span class="cm">// Streaming long-running A2A task with SSE</span>
+<span class="kw">const</span> <span class="fn">streamingTask</span> = <span class="kw">async</span> (query: <span class="kw">string</span>) => {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://agents.company.com/research"</span>, {
+    method: <span class="str">"POST"</span>,
+    headers: { <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>, <span class="str">"Authorization"</span>: <span class="str">"Bearer ..."</span> },
+    body: JSON.<span class="fn">stringify</span>({ jsonrpc: <span class="str">"2.0"</span>, method: <span class="str">"tasks/sendSubscribe"</span>, ... }),
+  });
+  <span class="kw">for await</span> (<span class="kw">const</span> event <span class="kw">of</span> <span class="fn">parseSSE</span>(res.body)) {
+    console.<span class="fn">log</span>(<span class="str">"status update:"</span>, event.data.status.state);
+  }
+};</pre>
+    </div>
+    <div class="diagram"><pre>
+A2A Multi-Agent Coordination Pattern:
+
+  User Request
+       │
+       ▼
+  ┌──────────────────┐
+  │  Orchestrator    │ — reads Agent Cards of available agents
+  │  Agent           │
+  └────┬─────────────┘
+       │ A2A tasks/send
+   ┌───┼────────────────────┐
+   ▼   ▼                    ▼
+[Research  [Code Executor  [Report Writer
+ Agent]     Agent]          Agent]
+       │                    │
+       └──── handoff ───────▶
+             (artifact from ResearchAgent fed as input to ReportWriter)
+    </pre></div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> A2A lets agents built by different teams or frameworks collaborate. Each agent publishes an Agent Card (its API contract). A client sends a task, the server agent processes it and streams progress back via SSE, then returns a final artifact. Think of it as HTTP for AI agents — a standard handshake so any two agents can work together.</div>
+  </div>
+</div>
+
+<!-- BLOCK 6: Production Best Practices -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(79,142,247,.2);color:#4f8ef7">6</div>
+    <div><div class="bh-title">Production Best Practices</div><div class="bh-sub">Reliability · Cost · Security · Latency</div></div>
+  </div>
+  <div class="block-body">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <p><strong>Reliability:</strong></p>
+        <ul class="body-list">
+          <li><strong>Exponential backoff + jitter</strong> on 429/5xx responses (see Module 3)</li>
+          <li><strong>Fallback models:</strong> if GPT-4o fails, fall back to GPT-4o-mini or claude-sonnet</li>
+          <li><strong>Circuit breaker:</strong> after N consecutive failures, short-circuit for T seconds</li>
+          <li><strong>Timeout per node:</strong> agent nodes should have 30s timeouts to prevent blocking</li>
+          <li><strong>Idempotent tool calls:</strong> safe to retry; log tool call IDs to prevent duplicate actions</li>
+        </ul>
+      </div>
+      <div>
+        <p><strong>Cost Control:</strong></p>
+        <ul class="body-list">
+          <li><strong>Model routing:</strong> classify query complexity → use cheap model for simple queries</li>
+          <li><strong>Caching:</strong> semantic caching (GPTCache / langchain-cache) on frequent identical queries</li>
+          <li><strong>Prompt compression:</strong> LLMLingua to compress long contexts by 3–5× without quality loss</li>
+          <li><strong>Streaming:</strong> stream to users immediately; don't buffer full response before sending</li>
+          <li><strong>Budget alerts:</strong> set spend alerts on OpenAI/Anthropic dashboards; programmatic token budgets</li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <p><strong>Security:</strong></p>
+        <ul class="body-list">
+          <li><strong>Never log raw prompts</strong> to application logs (PII leakage)</li>
+          <li><strong>Input sanitisation:</strong> strip injection patterns before sending to LLM</li>
+          <li><strong>Output filtering:</strong> scan LLM output for PII/secrets before returning to user</li>
+          <li><strong>Tool least-privilege:</strong> read-only tools separate from write tools; human approval on destructive ops</li>
+          <li><strong>API key rotation:</strong> rotate LLM provider keys on a schedule; use secrets manager</li>
+        </ul>
+      </div>
+      <div>
+        <p><strong>Latency Optimisation:</strong></p>
+        <ul class="body-list">
+          <li><strong>Parallel retrieval:</strong> retrieve from multiple stores concurrently with Promise.all</li>
+          <li><strong>Streaming first token:</strong> stream partial responses; user sees output in &lt;1s</li>
+          <li><strong>KV cache reuse:</strong> put stable system prompt first; it's cached across requests (OpenAI prompt caching)</li>
+          <li><strong>Batch embeddings:</strong> embed chunks in batches of 100 during indexing (not 1-by-1)</li>
+          <li><strong>Edge deployment:</strong> deploy LLM proxy close to users (Cloudflare AI Gateway, Vercel AI)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Production checklist: structured logging + LangSmith traces for every request, per-feature cost tracking (so you know which feature costs $0.50/call), input/output validation at system boundaries, semantic caching for repeated similar queries, and circuit breakers that fall back to a cheaper model when the primary is slow or overloaded.</div>
+  </div>
+</div>
+
+<!-- EDGE CASES -->
+<div class="block">
+  <div class="block-header">
+    <div class="bh-num" style="background:rgba(239,68,68,.2);color:#ef4444">!</div>
+    <div><div class="bh-title">Edge Cases &amp; Failure Modes</div><div class="bh-sub">Production pitfalls that are hard to find in development</div></div>
+  </div>
+  <div class="block-body">
+    <div class="edge-grid">
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">🔑</div>
+        <div class="edge-title">API Key Leaked in Traces</div>
+        <div class="edge-desc">LangSmith traces capture all message content. If a user sends their API key as a message, it appears in LangSmith plaintext — accessible to all project members.</div>
+        <div class="edge-fix">Use LangSmith masking rules. Never log user messages verbatim. Add PII detection before tracing.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">⏱️</div>
+        <div class="edge-title">MCP Server Startup Latency</div>
+        <div class="edge-desc">Claude Desktop starts MCP servers on first use. A slow-starting server (e.g., JVM, slow network init) causes a 10-30s pause on first tool call.</div>
+        <div class="edge-fix">Warm up MCP servers eagerly on host startup. Use keep-alive pings. Prefer Node.js/Go servers for fast cold start.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-h">HIGH</span>
+        <div class="edge-icon">🌐</div>
+        <div class="edge-title">A2A Agent Discovery Staleness</div>
+        <div class="edge-desc">Agent Cards cached by orchestrator. Remote agent updates its capabilities (new skills, deprecated endpoints) but orchestrator still uses old card — calls fail.</div>
+        <div class="edge-fix">TTL on agent card cache (5–15 min). Re-fetch on 404/501 errors. Agents should version their cards.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">🔄</div>
+        <div class="edge-title">LangSmith Trace Sampling</div>
+        <div class="edge-desc">High-volume production apps send millions of traces. LangSmith costs spike; UI slows. Disabling tracing removes observability entirely.</div>
+        <div class="edge-fix">LANGCHAIN_TRACING_SAMPLE_RATE=0.1 (trace 10%). Always trace errors (LANGCHAIN_TRACING_ON_ERROR=true). Tag and filter by importance.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">📦</div>
+        <div class="edge-title">MCP Resource Over-Exposure</div>
+        <div class="edge-desc">Filesystem MCP server given access to "/" — model can read /etc/passwd, SSH keys, or .env files containing credentials.</div>
+        <div class="edge-fix">Restrict allowed paths in server config. Use allowlist (not denylist). Audit MCP server permissions as part of deployment review.</div>
+      </div>
+      <div class="edge-card">
+        <span class="edge-sev sev-m">MED</span>
+        <div class="edge-icon">💸</div>
+        <div class="edge-title">Eval Runaway Costs</div>
+        <div class="edge-desc">LLM-as-judge evaluations run GPT-4 on every trace. A 10,000-run evaluation dataset × judge call = massive cost. Triggered accidentally via CI/CD.</div>
+        <div class="edge-fix">Use cheaper judge models (GPT-4o-mini). Set maxConcurrency and total eval budget. Gate evals behind explicit deployment approval step.</div>
+      </div>
+    </div>
+    <div class="simple-terms"><span class="st-label">💡 Simple:</span> Three common production failures: (1) MCP tool schema drift — your tool changed but Claude's cached description did not; restart the MCP server. (2) A2A without authentication — never expose agent task endpoints publicly without auth tokens. (3) Eval cost shock — running GPT-4 as judge on every evaluation gets expensive fast; use GPT-4o-mini and batch evaluations.</div>
+  </div>
+</div>
+
+</div>
+</section>
+
+<footer>Module 6 of 12 — ← <a href="agents.html" style="color:#a78bfa">Module 5 · Agents</a> | <a href="open-source.html" style="color:#a78bfa">Module 7 · HuggingFace &amp; Fine-tuning →</a></footer>
+</body>
+</html>
